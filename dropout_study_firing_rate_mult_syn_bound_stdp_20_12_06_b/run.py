@@ -275,7 +275,7 @@ def quick_plot(m, repeats=1, show_connectivity=True, n_show_only=None, add_noise
 
     return all_rsps
 
-S.T = 150.
+S.T = 300.
 S.DT = 0.2e-3
 m2 = copy(M)
 m2.EPSILON = 0.
