@@ -3,12 +3,18 @@ import time
 from scipy.sparse import csc_matrix, csr_matrix, kron
 import sparse
 
+###
+
+# sparsity in simulation for timestep 0.05e-3
+# is 2.5 Hz (driving rate) * ~4 spks per neuron * t_step_size = 2.5 * 4 * 0.05e-3 = ~0.0005
+
 spk_dim = 50
 t_step_size = 0.05e-3
-stdp_time_dim = int(20e-3 / t_step_size)
-t_steps = int(1000/t_step_size / 1e4)
+stdp_time_dim = int(35e-3 / t_step_size)
+t_steps = int(1000/t_step_size / 1e3 * 5)
 t_lim = int(100e-3 / t_step_size)
 print(f't_steps = {t_steps}')
+print(f't_lim = {t_lim}')
 
 np.random.seed(1)
 
@@ -17,7 +23,7 @@ def rand_spks_of_dim(*dim, spk_density_thresh):
 
 ### speed test non-sparse
 
-for spk_density_thresh in [0.001, 0.005, 0.01]:
+for spk_density_thresh in [0.0005, 0.001, 0.005, 0.01]:
 	print('sparsity:', spk_density_thresh)
 
 
@@ -30,9 +36,6 @@ for spk_density_thresh in [0.001, 0.005, 0.01]:
 
 	s1 = time.time()
 
-	# indices = np.arange(0, spk_dim**2).reshape(spk_dim, spk_dim).T.reshape(spk_dim**2)
-
-	# for i in range(100):
 	for t_ctr in range(t_steps):
 		curr_spks = curr_spks_all[t_ctr]
 		spk_hist = spk_hist_all[t_ctr]
@@ -48,14 +51,17 @@ for spk_density_thresh in [0.001, 0.005, 0.01]:
 			else:
 				break
 
-
-		a = csr_matrix(curr_spks)
-		b = csr_matrix(spk_hist)
+		a = csc_matrix(curr_spks)
+		b = csc_matrix(spk_hist)
 		o = kron(a, b)
+		# print(o.shape)
+		o.multiply(np.ones((stdp_time_dim, 1)))
+
 		o_prime = o.todense()
+		# print(o_prime.shape)
 
 		for spk_time, nrn_idx in spk_time_hist:
-			o_prime[nrn_idx * spk_dim:(nrn_idx+1) * spk_dim, :(t_ctr - spk_time)]
+			o_prime[:(t_ctr - spk_time), nrn_idx * spk_dim:(nrn_idx+1) * spk_dim]
 
 	print(spk_time_hist)
 	e1 = time.time()
