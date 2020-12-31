@@ -72,18 +72,19 @@ def generate_chain_weight_mat(m):
     w_syn = np.zeros((m.N_EXC, m.N_EXC))
     for idx, layer_idx in enumerate(chain_order):
         layer_start = m.PROJECTION_NUM * layer_idx
+        w_syn[layer_start : layer_start + m.PROJECTION_NUM, layer_start : layer_start + m.PROJECTION_NUM] = np.ones((m.PROJECTION_NUM, m.PROJECTION_NUM))
         if idx + 1 < len(chain_order):
             next_layer_idx = chain_order[idx + 1]
             next_layer_start = m.PROJECTION_NUM * next_layer_idx
 
             w_syn[next_layer_start : next_layer_start + m.PROJECTION_NUM, layer_start : layer_start + m.PROJECTION_NUM] = np.ones((m.PROJECTION_NUM, m.PROJECTION_NUM))
 
-        if idx + 2 < len(chain_order):
-            skip_layer_idx = chain_order[idx + 2]
-            skip_layer_start = m.PROJECTION_NUM * skip_layer_idx
+        # if idx + 2 < len(chain_order):
+        #     skip_layer_idx = chain_order[idx + 2]
+        #     skip_layer_start = m.PROJECTION_NUM * skip_layer_idx
 
-            w_syn[skip_layer_start : skip_layer_start + m.PROJECTION_NUM, layer_start : layer_start + m.PROJECTION_NUM] = np.ones((m.PROJECTION_NUM, m.PROJECTION_NUM))
-    w_syn *= m.W_MAX / (m.M)
+        #     w_syn[skip_layer_start : skip_layer_start + m.PROJECTION_NUM, layer_start : layer_start + m.PROJECTION_NUM] = np.ones((m.PROJECTION_NUM, m.PROJECTION_NUM))
+    w_syn *= m.W_MAX / m.M
     return w_syn
 
 ### RUN_TEST function
@@ -110,9 +111,9 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
         'A': np.zeros((m.N_EXC + m.N_INH, m.N_DRIVING_CELLS + m.N_EXC + m.N_INH)),
     }
     
-    e_i_r = np.stack([rand_n_ones_in_vec_len_l(10, m.N_EXC) for i in range(m.N_INH)])
+    e_i_r = np.stack([rand_n_ones_in_vec_len_l(3, m.N_EXC) for i in range(m.N_INH)])
     
-    i_e_r = np.stack([rand_n_ones_in_vec_len_l(20, m.N_INH) for i in range(m.N_EXC)])
+    i_e_r = np.stack([rand_n_ones_in_vec_len_l(40, m.N_INH) for i in range(m.N_EXC)])
     
     w_e_e_r = generate_chain_weight_mat(m)
     w_e_e_r[:m.N_EXC, :m.N_EXC] += m.RAND_WEIGHT_MAX * np.random.rand(m.N_EXC, m.N_EXC)
@@ -208,6 +209,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 fr_set_points=m.FR_SET_POINTS,
                 output_freq=1000,
                 homeo=True,
+                weight_update=True,
             )
 
             clamp = Generic(
@@ -304,26 +306,26 @@ def quick_plot(m, repeats=1, show_connectivity=True, n_show_only=None, add_noise
                     fig.savefig(f'{output_dir}/{title}_{idx_r}_{idx_do}_{t_idx}.png')
     return all_rsps
 
-S.T = 4.
+S.T = 150.
 S.DT = 0.05e-3
 m2 = copy(M)
 
 m2.EPSILON = 0. # deprecated
-m2.ETA = 0.000000015
+m2.ETA = 0.000001
 m2.GAMMA = 0. # deprecated
 
-m2.W_A = 5e-5
-m2.W_E_I_R = 4e-5
-m2.W_I_E_R = 0.3e-5
+m2.W_A = 5e-4
+m2.W_E_I_R = 10e-5
+m2.W_I_E_R = 0.2e-5
 m2.T_R_E = 1e-3
-m2.W_MAX = 0.26 * 0.004 * .09
+m2.W_MAX = 0.26 * 0.004 * .14
 m2.W_U_E = 0.26 * 0.004 * .15
 m2.M = 5
 
-m2.FR_SET_POINTS = 3 * m2.DRIVING_HZ * S.DT * np.ones(m2.N_EXC)
-m2.ALPHA = 50.
+m2.FR_SET_POINTS = 3.5 * m2.DRIVING_HZ * S.DT * np.ones(m2.N_EXC)
+m2.ALPHA = 0.1
 m2.RAND_WEIGHT_MAX = m2.W_MAX / (m2.M * m2.N_EXC)
-m2.DROPOUT_TIME = 150.
+m2.DROPOUT_TIME = 200.
 
 m2.BURST_T = 2e-3
 

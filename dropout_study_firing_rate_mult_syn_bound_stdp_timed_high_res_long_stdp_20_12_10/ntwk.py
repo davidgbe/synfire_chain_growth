@@ -71,7 +71,7 @@ class LIFNtwkG(object):
         self.kernel = np.exp(-self.taus * dt / self.tau_stdp)
 
         self.gamma = gamma
-        self.homeo = homeo
+        self.homeo = homeo  
         self.alpha = alpha
         self.fr_set_points = fr_set_points
 
@@ -87,7 +87,7 @@ class LIFNtwkG(object):
 
         if t_points_for_stdp > 0:
             sparse_curr_spks = csc_matrix(curr_spks)
-            sparse_spks = csc_matrix(spks[:-1, :])
+            sparse_spks = csc_matrix(np.flip(spks[:-1, :], axis=0))
 
             o = kron(curr_spks, sparse_spks).T.dot(self.kernel[:t_points_for_stdp]).reshape(num_cells, num_cells)
 

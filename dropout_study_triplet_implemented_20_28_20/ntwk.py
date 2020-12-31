@@ -18,9 +18,10 @@ class LIFNtwkG(object):
     
     def __init__(self, c_m, g_l, e_l, v_th, v_r, t_r, e_s, t_s, w_r, w_u, plasticity_indices, connectivity, W_max, m, eta,
         epsilon, dt, gamma, alpha, fr_set_points,
-        sparse=False, output=True, output_freq=1000, homeo=True):
+        sparse=False, output=True, output_freq=1000, homeo=True, weight_update=True):
         # ntwk size
         n = next(iter(w_r.values())).shape[0]
+        self.weight_update = weight_update
         
         # process inputs
         if type(t_r) in [float, int]:
@@ -71,9 +72,8 @@ class LIFNtwkG(object):
 
         ###################
         # STDP params
-        self.a2minus = 7.1
-        self.a3plus = 6.5
-
+        self.a2minus = 7.1e-1 / 5
+        self.a3plus = 6.5e-1 / 5        
         # pairwise params
         self.tau_stdp_pair = {
             '+': 16.8e-3, # 16.8 ms
@@ -110,6 +110,9 @@ class LIFNtwkG(object):
 
         self.t_hist_lim = int(100e-3 / dt)
 
+        print(self.kernel_pair)
+        print(self.kernel_trip)
+
     def update_w(self, t_ctr, spks, dt, spk_time_hist):
         # STDP update for calculation of delta_stdp(t)
         curr_spks = spks[-1, :]
@@ -119,7 +122,7 @@ class LIFNtwkG(object):
 
         if t_points_for_stdp > 0:
             sparse_curr_spks = csc_matrix(curr_spks)
-            sparse_spks = csc_matrix(spks[:-1, :])
+            sparse_spks = csc_matrix(np.flip(spks[:-1, :], axis=0))
 
             # compute sparse pairwise correlations with curr_spks and spikes in stdp pairwise time window
             spk_pair_outer = kron(curr_spks, sparse_spks)
@@ -140,13 +143,6 @@ class LIFNtwkG(object):
             for spk_tm_idx, nrn_idx in spk_time_hist:
                 tm_idxs_since_spk = t_ctr - spk_tm_idx
                 stdp_trip_update_for_spk_tm = stdp_pair_plus_outer[:tm_idxs_since_spk, nrn_idx, :].sum(axis=0)
-                try:
-                    self.kernel_trip['+'][tm_idxs_since_spk]
-                except IndexError as e:
-                    print(self.kernel_trip['+'].shape)
-                    print(tm_idxs_since_spk, nrn_idx)
-                    print(spk_time_hist)
-                    print(t_ctr)
                 stdp_trip[nrn_idx, :] += stdp_trip_update_for_spk_tm * self.kernel_trip['+'][tm_idxs_since_spk]
                 
             normed_w_r_e = w_r_e_plastic / self.w_max + 0.001
@@ -245,6 +241,10 @@ class LIFNtwkG(object):
         # loop over timesteps
         for t_ctr in range(len(i_ext) - 4 * t_r_int[0]):
 
+            if t_ctr % 5000 == 0:
+                print(f'{t_ctr / len(i_ext) * 100}% finished' )
+                print(f'completed {dt * t_ctr * 1000} ms of {len(i_ext) * dt} s')
+
             for t, dropout in dropouts:
                 if int(t / dt) == t_ctr:
                     self.w_r['E'][:, :50] = dropout_on_mat(self.w_r['E'][:, :50], dropout['E'])
@@ -295,11 +295,15 @@ class LIFNtwkG(object):
             stdp_spk_hist = spks[stdp_start:(t_ctr + 1), self.plasticity_indices]
             curr_spks = stdp_spk_hist[-1, :]
 
-            self.update_w(t_ctr, stdp_spk_hist, dt, spk_time_hist)
-            self.update_spk_hist(spk_time_hist, curr_spks, t_ctr)
+            if self.weight_update:
+                self.update_w(t_ctr, stdp_spk_hist, dt, spk_time_hist)
+                self.update_spk_hist(spk_time_hist, curr_spks, t_ctr)
 
             if self.output and (t_ctr % self.output_freq == 0):
-                sio.savemat(output_dir + '/' + f'{zero_pad(int(t_ctr / self.output_freq), 6)}', {'w_r_e': self.w_r['E']})
+                sio.savemat(output_dir + '/' + f'{zero_pad(int(t_ctr / self.output_freq), 6)}', {
+                    'w_r_e': self.w_r['E'],
+                    'w_r_i': self.w_r['I'],
+                })
 
             # reset v and update refrac periods for nrns that spiked
             vs[t_ctr, spks[t_ctr, :]] = v_r[spks[t_ctr, :]]
