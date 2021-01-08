@@ -291,7 +291,7 @@ def quick_plot(m, w_r_e=None, w_r_i=None, repeats=1, show_connectivity=True, n_s
                     fig.savefig(f'{output_dir}/{title}_{idx_r}_{idx_do}_{t_idx}.png')
     return all_rsps
 
-S.T = 1000.
+S.T = 1.
 S.DT = 0.05e-3
 m2 = copy(M)
 

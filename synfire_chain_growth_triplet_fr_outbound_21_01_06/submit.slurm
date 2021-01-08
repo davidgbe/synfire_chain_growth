@@ -7,16 +7,17 @@
 #SBATCH -A stf
 
 #SBATCH --nodes=1
-#SBATCH --time=0:05:00
-#SBATCH --ntasks=5
-#SBATCH --mem=20G
+#SBATCH --time=20:00:00
+#SBATCH --ntasks=12
+#SBATCH --mem=40G
 
 #SBATCH --chdir=.
 
 ## Module import
+module load contrib/python_3.8/3.8
 
 ## Commands to run
-python3 run.py
+python run.py
 
 ## Exit
 exit 0
