@@ -17,7 +17,10 @@
 module load contrib/python_3.8/3.8
 
 ## Commands to run
+cd //gscratch/stf/davidgbe/compneuro/synfire_chain_growth/synfire_chain_growth_triplet_fr_outbound_21_01_06
+source davidgbe-env/bin/activate
 python run.py
+deactivate
 
 ## Exit
 exit 0
