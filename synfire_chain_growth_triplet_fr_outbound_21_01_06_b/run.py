@@ -68,27 +68,6 @@ S = Generic(RNG_SEED=0, DT=0.1e-3)
 
 print('T_M_E =', 1000*M.C_M_E/M.G_L_E, 'ms')  # E cell membrane time constant (C_m/g_m)
 
-def generate_chain_weight_mat(m):
-    chain_order = np.arange(1, int(m.N_EXC / m.PROJECTION_NUM), dtype=int)
-    chain_order = np.insert(chain_order, 0, 0)
-    w_syn = np.zeros((m.N_EXC, m.N_EXC))
-    for idx, layer_idx in enumerate(chain_order):
-        layer_start = m.PROJECTION_NUM * layer_idx
-        w_syn[layer_start : layer_start + m.PROJECTION_NUM, layer_start : layer_start + m.PROJECTION_NUM] = np.ones((m.PROJECTION_NUM, m.PROJECTION_NUM))
-        if idx + 1 < len(chain_order):
-            next_layer_idx = chain_order[idx + 1]
-            next_layer_start = m.PROJECTION_NUM * next_layer_idx
-
-            w_syn[next_layer_start : next_layer_start + m.PROJECTION_NUM, layer_start : layer_start + m.PROJECTION_NUM] = np.ones((m.PROJECTION_NUM, m.PROJECTION_NUM))
-
-        # if idx + 2 < len(chain_order):
-        #     skip_layer_idx = chain_order[idx + 2]
-        #     skip_layer_start = m.PROJECTION_NUM * skip_layer_idx
-
-        #     w_syn[skip_layer_start : skip_layer_start + m.PROJECTION_NUM, layer_start : layer_start + m.PROJECTION_NUM] = np.ones((m.PROJECTION_NUM, m.PROJECTION_NUM))
-    w_syn *= m.W_MAX / m.M
-    return w_syn
-
 ### RUN_TEST function
 
 def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=None,
@@ -116,8 +95,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
     connectivity = np.ones((m.N_EXC, m.N_EXC))
 
     if w_r_e is None:
-        w_e_e_r = generate_chain_weight_mat(m)
-        w_e_e_r[:m.N_EXC, :m.N_EXC] += m.RAND_WEIGHT_MAX * np.random.rand(m.N_EXC, m.N_EXC)
+        w_e_e_r = m.RAND_WEIGHT_MAX * np.random.rand(m.N_EXC, m.N_EXC)
         np.fill_diagonal(w_e_e_r, 0.)
 
         e_i_r = np.stack([rand_n_ones_in_vec_len_l(3, m.N_EXC) for i in range(m.N_INH)])
@@ -148,8 +126,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
     w_r_for_dropouts = []
     for dropout in dropouts:
         w_r = copy(w_r_base)
-        # w_r['E'][:, :m.N_EXC] = dropout_on_mat(w_r['E'][:, :m.N_EXC], dropout['E'])
-        # w_r['I'][:, m.N_EXC:] = dropout_on_mat(w_r['I'][:, m.N_EXC:], dropout['I'])
         w_r_for_dropouts.append(w_r)
     
     # generate timesteps and initial excitatory input window
@@ -217,7 +193,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 fr_set_points=m.FR_SET_POINTS,
                 output_freq=1000,
                 homeo=True,
-                weight_update=False,
+                weight_update=True,
             )
 
             clamp = Generic(
@@ -315,7 +291,7 @@ def quick_plot(m, w_r_e=None, w_r_i=None, repeats=1, show_connectivity=True, n_s
                     fig.savefig(f'{output_dir}/{title}_{idx_r}_{idx_do}_{t_idx}.png')
     return all_rsps
 
-S.T = 5.
+S.T = 1000.
 S.DT = 0.05e-3
 m2 = copy(M)
 
@@ -334,7 +310,7 @@ m2.M = 5
 m2.FR_SET_POINTS = 2.5 * m2.DRIVING_HZ * S.DT * np.ones(m2.N_EXC)
 m2.ALPHA = 0.1
 m2.RAND_WEIGHT_MAX = m2.W_MAX / (m2.M * m2.N_EXC)
-m2.DROPOUT_TIME = 50.
+m2.DROPOUT_TIME = 1100.
 
 m2.BURST_T = 2e-3
 
@@ -344,12 +320,6 @@ def load_weight_matrices(direc, num):
     loaded = sio.loadmat(os.path.join(direc, file))
     return loaded['w_r_e'], loaded['w_r_i']
 
-w_r_e, w_r_i = load_weight_matrices('./data/2021-01-05--12:23--33_0_0', -1)
-
-w_r_e[50:, :] = w_r_e[50:, :] / w_r_e[50:, :].max() * 16e-5
-
-w_r_i = w_r_i / w_r_i.max() * 0.25e-5
-
-all_rsps = quick_plot(m2, w_r_e=w_r_e, w_r_i=w_r_i, dropouts=[
-    {'E': 0.0, 'I': 0},
+all_rsps = quick_plot(m2, dropouts=[
+    {'E': 0, 'I': 0},
     ])
