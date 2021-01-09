@@ -327,7 +327,7 @@ m2.W_MAX = 0.26 * 0.004 * .33
 m2.W_U_E = 0.26 * 0.004 * .15
 m2.M = 5
 
-m2.FR_SET_POINTS = 2.5 * m2.DRIVING_HZ * S.DT * np.ones(m2.N_EXC)
+m2.FR_SET_POINTS = 4 * m2.DRIVING_HZ * S.DT * np.ones(m2.N_EXC)
 m2.ALPHA = 0.1
 m2.RAND_WEIGHT_MAX = m2.W_MAX / (m2.M * m2.N_EXC)
 m2.DROPOUT_TIME = 1100.

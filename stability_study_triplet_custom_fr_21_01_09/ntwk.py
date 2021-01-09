@@ -152,7 +152,7 @@ class LIFNtwkG(object):
         fr_diffs = self.fr_set_points - curr_spks
 
         fr_diffs[fr_diffs > 0] = 1.5e-4
-        fr_diffs[fr_diffs < 0] = 10 * fr_diffs[fr_diffs < 0]
+        fr_diffs[fr_diffs < 0] = 5 * fr_diffs[fr_diffs < 0]
 
         fr_diffs = fr_diffs.reshape(fr_diffs.shape[0], 1)
         fr_homeo_update = fr_diffs * w_r_e_plastic / self.w_max 
