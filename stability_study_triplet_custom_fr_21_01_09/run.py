@@ -68,6 +68,23 @@ S = Generic(RNG_SEED=0, DT=0.1e-3)
 
 print('T_M_E =', 1000*M.C_M_E/M.G_L_E, 'ms')  # E cell membrane time constant (C_m/g_m)
 
+
+def generate_chain_weight_mat(m):
+    chain_order = np.arange(1, int(m.N_EXC / m.PROJECTION_NUM), dtype=int)
+    chain_order = np.insert(chain_order, 0, 0)
+    w_syn = np.zeros((m.N_EXC, m.N_EXC))
+    for idx, layer_idx in enumerate(chain_order):
+        layer_start = m.PROJECTION_NUM * layer_idx
+        w_syn[layer_start : layer_start + m.PROJECTION_NUM, layer_start : layer_start + m.PROJECTION_NUM] = rand_per_row_mat(m.CON_PER_ROW, (m.PROJECTION_NUM, m.PROJECTION_NUM))
+        if idx + 1 < len(chain_order):
+            next_layer_idx = chain_order[idx + 1]
+            next_layer_start = m.PROJECTION_NUM * next_layer_idx
+
+            w_syn[next_layer_start : next_layer_start + m.PROJECTION_NUM, layer_start : layer_start + m.PROJECTION_NUM] = rand_per_row_mat(m.CON_PER_ROW, (m.PROJECTION_NUM, m.PROJECTION_NUM))
+
+    w_syn *= m.W_MAX / m.M
+    return w_syn
+
 ### RUN_TEST function
 
 def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=None,
@@ -95,7 +112,9 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
     connectivity = np.ones((m.N_EXC, m.N_EXC))
 
     if w_r_e is None:
-        w_e_e_r = m.RAND_WEIGHT_MAX * np.random.rand(m.N_EXC, m.N_EXC)
+        w_e_e_r = generate_chain_weight_mat(m)
+        w_e_e_r += m.RAND_WEIGHT_MAX * np.random.rand(m.N_EXC, m.N_EXC)
+
         np.fill_diagonal(w_e_e_r, 0.)
 
         e_i_r = np.stack([rand_n_ones_in_vec_len_l(3, m.N_EXC) for i in range(m.N_INH)])
@@ -292,7 +311,7 @@ def quick_plot(m, w_r_e=None, w_r_i=None, repeats=1, show_connectivity=True, n_s
                     fig.savefig(f'{output_dir}/{title}_{idx_r}_{idx_do}_{t_idx}.png')
     return all_rsps
 
-S.T = 1.
+S.T = 15.
 S.DT = 0.05e-3
 m2 = copy(M)
 
@@ -304,7 +323,7 @@ m2.W_A = 5e-4
 m2.W_E_I_R = 10e-5
 m2.W_I_E_R = 0.2e-5
 m2.T_R_E = 1e-3
-m2.W_MAX = 0.26 * 0.004 * .14
+m2.W_MAX = 0.26 * 0.004 * .33
 m2.W_U_E = 0.26 * 0.004 * .15
 m2.M = 5
 
@@ -314,6 +333,8 @@ m2.RAND_WEIGHT_MAX = m2.W_MAX / (m2.M * m2.N_EXC)
 m2.DROPOUT_TIME = 1100.
 
 m2.BURST_T = 2e-3
+
+m2.CON_PER_ROW = 2
 
 def load_weight_matrices(direc, num):
     file_names = sorted(all_files_from_dir(direc))
