@@ -327,7 +327,7 @@ m2.W_MAX = 0.26 * 0.004 * .33
 m2.W_U_E = 0.26 * 0.004 * .15
 m2.M = 5
 
-m2.FR_SET_POINTS = 3.
+m2.FR_SET_POINTS = 2.
 m2.ALPHA = 0.1
 m2.RAND_WEIGHT_MAX = m2.W_MAX / (m2.M * m2.N_EXC)
 m2.DROPOUT_TIME = 1100.
@@ -342,6 +342,11 @@ def load_weight_matrices(direc, num):
     loaded = sio.loadmat(os.path.join(direc, file))
     return loaded['w_r_e'], loaded['w_r_i']
 
-all_rsps = quick_plot(m2, dropouts=[
-    {'E': 0, 'I': 0},
-    ])
+fr_set_points = [1., 2., 2.5]
+
+for fr_sp in fr_set_points:
+    m3 = copy(m2)
+    m3.FR_SET_POINTS = fr_sp
+    all_rsps = quick_plot(m3, dropouts=[
+        {'E': 0, 'I': 0},
+        ])
