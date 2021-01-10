@@ -104,7 +104,7 @@ class LIFNtwkG(object):
         # firing rate params
         self.homeo = homeo
         self.alpha = alpha
-        self.tau_fr = 10e-3
+        self.tau_fr = 20e-3
         self.fr_baseline = 1e-4
         self.fr_set_points = fr_set_points
 
