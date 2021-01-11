@@ -19,7 +19,7 @@ module load contrib/python_3.8/3.8
 ## Commands to run
 cd //gscratch/stf/davidgbe/compneuro
 source davidgbe-env/bin/activate
-cd synfire_chain_growth/stability_study_triplet_exp_fr_21_01_09_e
+cd synfire_chain_growth/stability_study_triplet_square_fr_21_01_11
 python run.py 0.00005
 deactivate
 
