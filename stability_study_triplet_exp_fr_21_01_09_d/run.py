@@ -249,7 +249,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
     return all_rsps
 
 def quick_plot(m, w_r_e=None, w_r_i=None, repeats=1, show_connectivity=True, n_show_only=None, add_noise=True, dropouts=[{'E': 0, 'I': 0}]):
-    output_dir_name = f'{time_stamp(s=True)}'
+    output_dir_name = f'{time_stamp(s=True)}:{zero_pad(int(np.random.rand() * 9999), 4)}'
 
     all_rsps = run_test(m, output_dir_name=output_dir_name, show_connectivity=show_connectivity,
                         repeats=repeats, n_show_only=n_show_only, add_noise=add_noise, dropouts=dropouts,
