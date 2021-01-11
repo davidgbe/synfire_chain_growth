@@ -11,6 +11,7 @@ import os
 from scipy.ndimage.interpolation import shift
 import scipy.io as sio
 from functools import reduce
+import argparse
 
 from aux import *
 from disp import *
@@ -19,6 +20,11 @@ from utils.general import *
 from utils.file_io import *
 
 cc = np.concatenate
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('fr_baseline', metavar='F', type=float, nargs=1)
+args = parser.parse_args()
 
 # PARAMS
 ## NEURON AND NETWORK MODEL
@@ -211,13 +217,13 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 gamma=m.GAMMA,
                 alpha=m.ALPHA,
                 fr_set_points=m.FR_SET_POINTS,
+                fr_baseline=m.FR_BASELINE,
                 output_freq=1000,
                 homeo=True,
                 weight_update=True,
             )
 
-            clamp = Generic(
-                v={0: np.repeat(m.E_L_E, m.N_EXC + m.N_INH)}, spk={})
+            clamp = Generic(v={0: np.repeat(m.E_L_E, m.N_EXC + m.N_INH)}, spk={})
 
             # run smln
             rsp = ntwk.run(dt=S.DT, clamp=clamp, i_ext=i_ext,
@@ -328,6 +334,8 @@ m2.W_U_E = 0.26 * 0.004 * .15
 m2.M = 5
 
 m2.ALPHA = 0.1
+m2.FR_BASELINE = args.fr_baseline
+
 m2.RAND_WEIGHT_MAX = m2.W_MAX / (m2.M * m2.N_EXC)
 m2.DROPOUT_TIME = 1100.
 
