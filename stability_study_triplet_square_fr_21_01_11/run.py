@@ -11,6 +11,7 @@ import os
 from scipy.ndimage.interpolation import shift
 import scipy.io as sio
 from functools import reduce
+import argparse
 
 from aux import *
 from disp import *
@@ -19,6 +20,11 @@ from utils.general import *
 from utils.file_io import *
 
 cc = np.concatenate
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('fr_baseline', metavar='F', type=float, nargs=1)
+args = parser.parse_args()
 
 # PARAMS
 ## NEURON AND NETWORK MODEL
@@ -211,13 +217,13 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 gamma=m.GAMMA,
                 alpha=m.ALPHA,
                 fr_set_points=m.FR_SET_POINTS,
+                fr_baseline=m.FR_BASELINE,
                 output_freq=1000,
                 homeo=True,
                 weight_update=True,
             )
 
-            clamp = Generic(
-                v={0: np.repeat(m.E_L_E, m.N_EXC + m.N_INH)}, spk={})
+            clamp = Generic(v={0: np.repeat(m.E_L_E, m.N_EXC + m.N_INH)}, spk={})
 
             # run smln
             rsp = ntwk.run(dt=S.DT, clamp=clamp, i_ext=i_ext,
@@ -243,7 +249,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
     return all_rsps
 
 def quick_plot(m, w_r_e=None, w_r_i=None, repeats=1, show_connectivity=True, n_show_only=None, add_noise=True, dropouts=[{'E': 0, 'I': 0}]):
-    output_dir_name = f'{time_stamp(s=True)}'
+    output_dir_name = f'{time_stamp(s=True)}:{zero_pad(int(np.random.rand() * 9999), 4)}'
 
     all_rsps = run_test(m, output_dir_name=output_dir_name, show_connectivity=show_connectivity,
                         repeats=repeats, n_show_only=n_show_only, add_noise=add_noise, dropouts=dropouts,
@@ -311,7 +317,7 @@ def quick_plot(m, w_r_e=None, w_r_i=None, repeats=1, show_connectivity=True, n_s
                     fig.savefig(f'{output_dir}/{title}_{idx_r}_{idx_do}_{t_idx}.png')
     return all_rsps
 
-S.T = 200.
+S.T = 60.
 S.DT = 0.05e-3
 m2 = copy(M)
 
@@ -327,7 +333,9 @@ m2.W_MAX = 0.26 * 0.004 * .33
 m2.W_U_E = 0.26 * 0.004 * .15
 m2.M = 5
 
-m2.ALPHA = 0.1
+m2.ALPHA = 5e-4
+m2.FR_BASELINE = args.fr_baseline
+
 m2.RAND_WEIGHT_MAX = m2.W_MAX / (m2.M * m2.N_EXC)
 m2.DROPOUT_TIME = 1100.
 
@@ -341,7 +349,7 @@ def load_weight_matrices(direc, num):
     loaded = sio.loadmat(os.path.join(direc, file))
     return loaded['w_r_e'], loaded['w_r_i']
 
-fr_set_points = [4.]
+fr_set_points = [4., 3., 1.]
 
 for fr_sp in fr_set_points:
     m3 = copy(m2)
