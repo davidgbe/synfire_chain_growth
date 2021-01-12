@@ -317,7 +317,7 @@ def quick_plot(m, w_r_e=None, w_r_i=None, repeats=1, show_connectivity=True, n_s
                     fig.savefig(f'{output_dir}/{title}_{idx_r}_{idx_do}_{t_idx}.png')
     return all_rsps
 
-S.T = 60.
+S.T = 150.
 S.DT = 0.05e-3
 m2 = copy(M)
 
@@ -325,7 +325,7 @@ m2.EPSILON = 0. # deprecated
 m2.ETA = 0.000001
 m2.GAMMA = 0. # deprecated
 
-m2.W_A = 5e-4
+m2.W_A = 5e-4 
 m2.W_E_I_R = 10e-5
 m2.W_I_E_R = 0.2e-5
 m2.T_R_E = 1e-3
@@ -333,7 +333,7 @@ m2.W_MAX = 0.26 * 0.004 * .33
 m2.W_U_E = 0.26 * 0.004 * .15
 m2.M = 5
 
-m2.ALPHA = 5e-4
+m2.ALPHA = 2e-3
 m2.FR_BASELINE = args.fr_baseline
 
 m2.RAND_WEIGHT_MAX = m2.W_MAX / (m2.M * m2.N_EXC)
@@ -349,7 +349,7 @@ def load_weight_matrices(direc, num):
     loaded = sio.loadmat(os.path.join(direc, file))
     return loaded['w_r_e'], loaded['w_r_i']
 
-fr_set_points = [4., 3., 1.]
+fr_set_points = [3., 1.]
 
 for fr_sp in fr_set_points:
     m3 = copy(m2)
