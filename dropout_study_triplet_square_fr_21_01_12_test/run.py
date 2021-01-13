@@ -220,7 +220,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 fr_baseline=m.FR_BASELINE,
                 output_freq=1000,
                 homeo=True,
-                weight_update=True,
+                weight_update=False,
             )
 
             clamp = Generic(v={0: np.repeat(m.E_L_E, m.N_EXC + m.N_INH)}, spk={})
@@ -317,7 +317,7 @@ def quick_plot(m, w_r_e=None, w_r_i=None, repeats=1, show_connectivity=True, n_s
                     fig.savefig(f'{output_dir}/{title}_{idx_r}_{idx_do}_{t_idx}.png')
     return all_rsps
 
-S.T = 150.
+S.T = 10.
 S.DT = 0.05e-3
 m2 = copy(M)
 
@@ -337,7 +337,7 @@ m2.ALPHA = 1.5e-3
 m2.FR_BASELINE = args.fr_baseline
 
 m2.RAND_WEIGHT_MAX = m2.W_MAX / (m2.M * m2.N_EXC)
-m2.DROPOUT_TIME = 1100.
+m2.DROPOUT_TIME = 100.
 
 m2.BURST_T = 2e-3
 
@@ -349,11 +349,13 @@ def load_weight_matrices(direc, num):
     loaded = sio.loadmat(os.path.join(direc, file))
     return loaded['w_r_e'], loaded['w_r_i']
 
+w_r_e, w_r_i = load_weight_matrices('./data/2021-01-12--18:34--41:3064_0_0', 1100)
+
 fr_set_points = [3.]
 
 for fr_sp in fr_set_points:
     m3 = copy(m2)
     m3.FR_SET_POINTS = fr_sp
-    all_rsps = quick_plot(m3, dropouts=[
-        {'E': 0, 'I': 0},
+    all_rsps = quick_plot(m3, w_r_e=w_r_e, w_r_i=w_r_i, dropouts=[
+        {'E': 0.3, 'I': 0},
         ])
