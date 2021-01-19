@@ -338,7 +338,7 @@ def process_single_activation(exc_raster, m):
     spks_per_nrn = bin_occurences(exc_raster[1, :])
     return first_spk_times, spks_per_nrn
 
-S.T = 200.
+S.T = 1.
 S.DT = 0.05e-3
 m2 = copy(M)
 
@@ -352,7 +352,7 @@ m2.W_I_E_R = 0.3e-5
 m2.T_R_E = 1e-3
 m2.W_MAX = 0.26 * 0.004 * .24
 m2.W_U_E = 0.26 * 0.004 * .2
-m2.M = 5
+m2.M = 2
 
 m2.ALPHA = args.fr_penalty[0] # 1.5e-3
 m2.FR_BASELINE = args.fr_scale[0]

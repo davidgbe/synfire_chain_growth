@@ -181,14 +181,14 @@ class LIFNtwkG(object):
         under_zero = self.w_r_e_plastic_mask & (self.w_r['E'] < 0)
         self.w_r['E'][under_zero] = 0
 
-        # refresh w_r_e_plastic matrix
-        w_r_e_plastic = self.w_r['E'][self.w_r_e_plastic_mask].reshape(self.plastic_size, self.plastic_size)
+        # # refresh w_r_e_plastic matrix
+        # w_r_e_plastic = self.w_r['E'][self.w_r_e_plastic_mask].reshape(self.plastic_size, self.plastic_size)
 
-        # compute total output from individual cells and rescale by output bound
-        total_out_weights = np.sum(w_r_e_plastic, axis=0)
-        idx_outputs_exceeding_bound = total_out_weights > self.output_bound
-        w_r_e_plastic[:, idx_outputs_exceeding_bound] = self.output_bound * w_r_e_plastic[:, idx_outputs_exceeding_bound] / total_out_weights[idx_outputs_exceeding_bound]
-        self.w_r['E'][self.w_r_e_plastic_mask] = w_r_e_plastic.flatten()
+        # # compute total output from individual cells and rescale by output bound
+        # total_out_weights = np.sum(w_r_e_plastic, axis=0)
+        # idx_outputs_exceeding_bound = total_out_weights > self.output_bound
+        # w_r_e_plastic[:, idx_outputs_exceeding_bound] = self.output_bound * w_r_e_plastic[:, idx_outputs_exceeding_bound] / total_out_weights[idx_outputs_exceeding_bound]
+        # self.w_r['E'][self.w_r_e_plastic_mask] = w_r_e_plastic.flatten()
 
         # clip weights over individual synapse bound
         over_w_max = self.w_r_e_plastic_mask & (self.w_r['E'] > self.w_max)
