@@ -20,7 +20,7 @@ module load contrib/python_3.8/3.8
 cd //gscratch/stf/davidgbe/compneuro
 source davidgbe-env/bin/activate
 cd synfire_chain_growth/single_cell_fr_lif_trip_stdp_study_21_01/chain_stabilization_21_01_18
-python run.py --title adapt_test --w_a 8e-4 --fr_scale 1e-5  --fr_penalty 3e-3 --stdp_scale 10
+python run.py --title adapt_test_1_2 --w_a 8e-4 --fr_scale 1e-5  --fr_penalty 3e-3 --stdp_scale 10
 deactivate
 
 ## Exit

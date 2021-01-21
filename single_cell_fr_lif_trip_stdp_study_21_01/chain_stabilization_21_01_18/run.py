@@ -338,7 +338,7 @@ def process_single_activation(exc_raster, m):
     spks_per_nrn = bin_occurences(exc_raster[1, :])
     return first_spk_times, spks_per_nrn
 
-S.T = 1.
+S.T = 200.
 S.DT = 0.05e-3
 m2 = copy(M)
 
