@@ -271,7 +271,6 @@ class LIFNtwkG(object):
                 if int(t / dt) == t_ctr:
                     for i in range(1000):
                         outgoing_strengths = self.w_r['E'][:m.N_EXC, :m.N_EXC].sum(axis=1).reshape(m.N_EXC, 1)
-                        print('diff', m.W_MAX - outgoing_strengths)
                         self.w_r['E'][:m.N_EXC, :m.N_EXC] += 100. * self.w_r['E'][:m.N_EXC, :m.N_EXC] * (m.W_MAX - outgoing_strengths)
                         over_w_max = self.w_r['E'][:m.N_EXC, :m.N_EXC] > self.w_max
                         self.w_r['E'][:m.N_EXC, :m.N_EXC][over_w_max] = self.w_max

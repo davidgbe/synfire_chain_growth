@@ -355,10 +355,10 @@ m2.ETA = 0.000001
 m2.GAMMA = 0. # deprecated
 
 m2.W_A = args.w_a[0] # 5e-4 
-m2.W_E_I_R = 12e-5 / 2
-m2.W_I_E_R = m2.W_E_I_R / 2
+m2.W_E_I_R = 12e-5 / 3
+m2.W_I_E_R = m2.W_E_I_R / 4
 m2.T_R_E = 2.5e-3
-m2.W_MAX = 0.26 * 0.004 * .6
+m2.W_MAX = 0.26 * 0.004 * .3
 m2.W_U_E = 0.26 * 0.004 * .2
 m2.M = 10
 
@@ -388,5 +388,5 @@ for fr_sp in fr_set_points:
     m3 = copy(m2)
     m3.FR_SET_POINTS = fr_sp
     all_rsps = quick_plot(m3, run_title=args.title[0], dropouts=[
-        {'E': 0.3, 'I': 0},
+        {'E': 0.6, 'I': 0},
         ])

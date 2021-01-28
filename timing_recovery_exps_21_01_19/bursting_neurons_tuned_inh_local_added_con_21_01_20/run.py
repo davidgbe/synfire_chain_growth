@@ -118,7 +118,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
     if w_r_e is None:
         w_e_e_r = generate_chain_weight_mat(m)
 
-        k_range = (-5, 25)      
+        k_range = (-5, 15)      
         rand_connectivity_mask = np.zeros((m.N_EXC, m.N_EXC))
         for i in range(m.N_EXC):
             rand_connectivity_mask[i + k_range[0]: i + k_range[1], i] = 1
@@ -127,7 +127,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
         np.fill_diagonal(w_e_e_r, 0.)
 
-        e_i_r = np.stack([rand_n_ones_in_vec_len_l(150, m.N_EXC) for i in range(m.N_INH)])
+        e_i_r = np.stack([rand_n_ones_in_vec_len_l(5, m.N_EXC) for i in range(m.N_INH)])
 
         w_r_e = np.block([
             [ w_e_e_r, np.zeros((m.N_EXC, m.N_INH)) ],
@@ -277,7 +277,6 @@ def quick_plot(m, run_title='', w_r_e=None, w_r_i=None, repeats=1, show_connecti
             inh_raster = raster[:, raster[1, :] >= m.N_EXC]
 
             show_trial = (type(n_show_only) is None) or (type(n_show_only) is int and idx_r < n_show_only)
-            print(show_trial)
             # if show_trial:
             gs = gridspec.GridSpec(1, 1)
             fig = plt.figure(figsize=(18, 6), tight_layout=True)
@@ -311,7 +310,7 @@ def quick_plot(m, run_title='', w_r_e=None, w_r_i=None, repeats=1, show_connecti
                     fig = plt.figure(figsize=(10, 6), tight_layout=True)
                     axs = [fig.add_subplot(gs[0])]
 
-                    t_window = (trigger_time * S.DT, trigger_time * S.DT + 80e-3)
+                    t_window = (trigger_time * S.DT, trigger_time * S.DT + 120e-3)
 
                     exc_raster_for_win = exc_raster[:, (exc_raster[0, :] >= t_window[0]) & (exc_raster[0, :] < t_window[1])]
                     inh_raster_for_win = inh_raster[:, (inh_raster[0, :] >= t_window[0]) & (inh_raster[0, :] < t_window[1])]
@@ -348,10 +347,10 @@ m2.ETA = 0.000001
 m2.GAMMA = 0. # deprecated
 
 m2.W_A = args.w_a[0] # 5e-4 
-m2.W_E_I_R = 1e-5   
-m2.W_I_E_R = m2.W_E_I_R / 4
+m2.W_E_I_R = 6e-5
+m2.W_I_E_R = 0.2e-5
 m2.T_R_E = 2.5e-3
-m2.W_MAX = 0.26 * 0.004 * .48
+m2.W_MAX = 0.26 * 0.004 * .2
 m2.W_U_E = 0.26 * 0.004 * .2
 m2.M = 10
 
