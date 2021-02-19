@@ -356,6 +356,9 @@ def quick_plot(m, run_title='', w_r_e=None, w_r_i=None, repeats=1, show_connecti
 
     output_dir = f'./figures/{output_dir_name}'
     os.makedirs(output_dir)
+
+    robustness_output_dir = f'./robustness/{output_dir_name}'
+    os.makedirs(robustness_output_dir)
         
     for idx_r, rsps in enumerate(all_rsps):
         for idx_do, rsp_for_dropout in enumerate(rsps):
@@ -423,17 +426,25 @@ def quick_plot(m, run_title='', w_r_e=None, w_r_i=None, repeats=1, show_connecti
                     cell_order = np.arange(m.N_EXC)[~np.isnan(first_spk_times)]
                     trimmed_first_spk_times = first_spk_times[~np.isnan(first_spk_times)]
 
-                    def line(x, A, B):
-                        return A * x + B
+                    def line(x, A):
+                        return A * x
 
                     popt, pcov = curve_fit(line, trimmed_first_spk_times, cell_order)
+                    success = len(trimmed_first_spk_times) >= (0.95 * m.N_EXC)
 
-                    print(popt[0], popt[1])
+                    print(len(trimmed_first_spk_times) >= (0.95 * m.N_EXC))
+                    print(popt[0])
+
+                    sio.savemat(robustness_output_dir + '/' + f'title_{title}_dropout_{idx_do}_tidx_{t_idx}', {
+                        'prop': popt[0],
+                        'success': success,
+                        'first_spk_times': first_spk_times,
+                    })
 
                     axs[0].scatter(exc_raster_for_win[0, :] * 1000, exc_raster_for_win[1, :], s=1, c='black', zorder=0, alpha=1)
                     axs[0].scatter(inh_raster_for_win[0, :] * 1000, inh_raster_for_win[1, :], s=1, c='red', zorder=0, alpha=1)
 
-                    axs[0].plot(trimmed_first_spk_times, line(trimmed_first_spk_times, popt[0], popt[1]), lw=0.5, c='blue', zorder=1)
+                    axs[0].plot(trimmed_first_spk_times, line(trimmed_first_spk_times, popt[0]), lw=0.5, c='blue', zorder=1)
 
                     axs[0].set_ylim(-1, m.N_EXC + m.N_INH)
                     axs[0].set_xlim(t_window[0] * 1000, t_window[1] * 1000)
@@ -530,7 +541,12 @@ print(m2.W_E_I_R * 1e5)
 
 title = f'noise_ff_{clip(m2.W_INITIAL / (0.26 * 0.004))}_pf_{clip(m2.CON_PROB_FF)}_pr_{clip(m2.CON_PROB_R)}_eir_{clip(m2.W_E_I_R * 1e5)}_ier_{clip(m2.W_I_E_R * 1e5)}_dropout_sweep'
 
-for i in range(4):
+for i in range(50):
     all_rsps = quick_plot(m2, run_title=title, dropouts=[
+        {'E': 0, 'I': 0},
+        {'E': 0.1, 'I': 0},
+        {'E': 0.2, 'I': 0},
         {'E': 0.3, 'I': 0},
-        ])
+        {'E': 0.35, 'I': 0},
+        {'E': 0.4, 'I': 0},
+    ])
