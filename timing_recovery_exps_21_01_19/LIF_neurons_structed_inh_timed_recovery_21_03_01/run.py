@@ -386,7 +386,7 @@ def quick_plot(m, run_title='', w_r_e=None, w_r_i=None, repeats=1, show_connecti
             axs[0].scatter(inh_raster[0, :] * 1000, inh_raster[1, :], s=1, c='red', zorder=0, alpha=1)
 
             axs[0].set_ylim(-1, m.N_EXC + m.N_INH)
-            axs[0].set_xlim(0, S.T * 1000)
+            axs[0].set_xlim(0, S.T1 * 1000)
             axs[0].set_ylabel('Cell Index')
             axs[0].set_xlabel('Time (ms)')
             
@@ -498,7 +498,7 @@ def process_single_activation(exc_raster, m):
 
 S.T1 = 0.2
 S.T2 = 0.2 * (1 + 1 + 9.99)
-S.DT = 0.05e-3
+S.DT = 0.2e-3
 m2 = copy(M)
 
 m2.EPSILON = 0. # deprecated
