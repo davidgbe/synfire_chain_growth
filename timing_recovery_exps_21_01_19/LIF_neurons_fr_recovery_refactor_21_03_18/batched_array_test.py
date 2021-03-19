@@ -13,3 +13,5 @@ for i in range(10):
 
 ba = aux.BatchedArray(gen(), 5, 10, 1)
 
+ba[:, np.random.rand(5) > 5, :]
+

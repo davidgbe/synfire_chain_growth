@@ -8,7 +8,8 @@ import scipy.io as sio
 import os
 
 from utils.general import zero_pad
-from aux import Generic, c_tile, r_tile, dropout_on_mat
+from aux import *
+from process_activation import *
 
 cc = np.concatenate
 
@@ -211,7 +212,7 @@ class LIFNtwkG(object):
                 break
         del spk_time_hist[:to_remove]
 
-    def run(self, dt, clamp, i_ext, output_dir_name, dropouts, m, repairs=[], spks_u=None):
+    def run(self, dt, clamp, i_ext, output_dir_name, dropouts, m, batch_size, repairs=[], spks_u=None):
         """
         Run simulation.
         
@@ -241,11 +242,16 @@ class LIFNtwkG(object):
             output_dir = f'./data/{output_dir_name}'
             os.makedirs(output_dir)
 
+            figures_output_dir = f'./figures/{output_dir_name}'
+            os.makedirs(figures_output_dir)
+
+            robustness_output_dir = f'./robustness/{output_dir_name}'
+            os.makedirs(robustness_output_dir)
         
         # make data storage arrays
-        gs = {syn: np.nan * np.zeros((n_t, n)) for syn in syns}
-        vs = np.nan * np.zeros((n_t, n))
-        spks = np.zeros((n_t, n), dtype=bool)
+        gs = {syn: batched_nans(batch_size, (n_t, n)) for syn in syns}
+        vs = batched_nans(batch_size, (n_t, n))
+        spks = batched_falses(batch_size, (n_t, n))
         
         rp_ctr = np.zeros(n, dtype=int)
         
@@ -258,7 +264,7 @@ class LIFNtwkG(object):
             spk={int(round(t_/dt)): f_spk for t_, f_spk in tmp_spk})
 
         avg_initial_input_per_cell = np.mean(self.w_r['E'][:m.N_EXC, :m.N_EXC].sum(axis=1))
-        
+        save_count = 0
         # loop over timesteps
         for t_ctr in range(len(i_ext) - 4 * t_r_int[0]):
 
@@ -296,8 +302,13 @@ class LIFNtwkG(object):
                     if self.output:
                         sio.savemat(output_dir + '/' + f'{zero_pad(i_r + 2, 6)}', {
                             'avg_input_per_cell': avg_input_per_cell,
-
                         })
+
+            if t_ctr != 0 and t_ctr % batch_size == 0:
+                raster = np.stack(np.nonzero(spks[(t_ctr - batch_size): t_ctr, :])).astype(float)
+                raster[0, :] = (raster[0, :] + t_ctr - batch_size) * dt
+                process_activation_and_graph(raster, m, (t_ctr - batch_size) * dt, t_ctr * dt, zero_pad(save_count, 4), robustness_output_dir, figures_output_dir)
+                save_count += 1
             
             # update conductances
             for syn in syns:
@@ -324,7 +335,7 @@ class LIFNtwkG(object):
                 # get total current input
                 i_total = -g_l*(v - e_l)  # leak
                 i_total += np.sum([-gs[syn][t_ctr, :]*(v - e_s[syn]) for syn in syns], axis=0)  # synaptic
-                i_total += i_ext[t_ctr]  # external
+                i_total += i_ext[t_ctr, :]  # external
                 
                 # update v
                 vs[t_ctr, :] = v + (dt/c_m)*i_total
@@ -358,7 +369,7 @@ class LIFNtwkG(object):
         t = dt*np.arange(n_t, dtype=float)
         
         # convert spks to spk times and cell idxs (for easy access l8r)
-        tmp = spks.nonzero()
+        tmp = np.nonzero(spks.data)
         spks_t = dt * tmp[0]
         spks_c = tmp[1]
         

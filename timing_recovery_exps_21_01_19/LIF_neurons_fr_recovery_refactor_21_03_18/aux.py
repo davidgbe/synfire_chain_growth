@@ -33,15 +33,19 @@ class BatchedArray(object):
         self.batched_dim = batched_dim
 
         data = next(generator)
-        next_data = next(generator)
 
-        self.data = np.concatenate([data, next_data], axis=batched_dim)
+        if num_chunks > 1:
+            next_data = next(generator)
+            self.data = np.concatenate([data, next_data], axis=batched_dim)
+            self.min_in_scope = 0
+            self.max_in_scope = 2 * chunk_size
+        else:
+            self.data = data
+            self.min_in_scope = 0
+            self.max_in_scope = chunk_size
 
         self.dims =  self.data.shape
         self.n_dims = len(self.dims)
-
-        self.min_in_scope = 0
-        self.max_in_scope = 2 * chunk_size
 
         self.chunk_count = 0
 
@@ -138,6 +142,44 @@ class BatchedArray(object):
 
     def __len__(self):
         return self.len
+
+
+def batched_array_gen(length, batch_size, func):
+    def gen():
+        for i in range(0, length, batch_size):
+            yield func(i, i + batch_size)
+    return gen
+
+
+def batched_array(batch_size, shape, modifier, batch_dim=0):
+    length = shape[batch_dim]
+    shape_for_partial = list(shape)
+    shape_for_partial[batch_dim] = batch_size
+    def func(start, stop):
+        return modifier(start, stop) * np.ones(shape_for_partial)
+    return BatchedArray(batched_array_gen(length, batch_size, func)(), batch_size, np.ceil(length/batch_size))
+
+
+def batched_zeros(batch_size, shape, batch_dim=0):
+    def modifier(start, stop):
+        return 0.
+    return batched_array(batch_size, shape, modifier, batch_dim=batch_dim)
+
+
+def batched_nans(batch_size, shape, batch_dim=0):
+    def modifier(start, stop):
+        return np.nan
+    return batched_array(batch_size, shape, modifier, batch_dim=batch_dim)
+
+
+def batched_falses(batch_size, shape, batch_dim=0):
+    length = shape[batch_dim]
+    shape_for_partial = list(shape)
+    shape_for_partial[batch_dim] = batch_size
+    def func(start, stop):
+        return np.zeros(shape_for_partial, dtype=bool)
+    return BatchedArray(batched_array_gen(length, batch_size, func)(), batch_size, np.ceil(length/batch_size))
+
 
 def burst_count(ndarr):
 	cnts_per_nrn = ndarr.sum(axis=0)
