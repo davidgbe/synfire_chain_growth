@@ -19,7 +19,7 @@ module load contrib/python_3.8/3.8
 ## Commands to run
 cd //gscratch/stf/davidgbe/compneuro
 source davidgbe-env/bin/activate
-cd synfire_chain_growth/timing_recovery_exps_21_01_19/LIF_fr_per_sim_rule_21_03_28_b
+cd synfire_chain_growth/timing_recovery_exps_21_01_19/LIF_fr_per_sim_rule_exc_inh_21_03_28
 python run.py --w_a 0 --p_ff 0.15 --p_r 0.15
 deactivate
 
