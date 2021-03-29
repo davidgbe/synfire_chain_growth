@@ -303,7 +303,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     })
 
                     w_r['E'][:m.N_EXC, :m.N_EXC] += (1e-2 * (e_cell_fr_setpoint - np.sum(rsp.spks[:, :m.N_EXC] > 0, axis=0)) / e_cell_fr_setpoint * w_r['E'][:m.N_EXC, :m.N_EXC])
-                    w_r['E'][m.N_EXC:, :m.N_EXC] += (1e-3 * (i_cell_fr_setpoint - np.sum(rsp.spks[:, m.N_EXC:] > 0, axis=0)) / i_cell_fr_setpoint * w_r['E'][m.N_EXC:, :m.N_EXC])
+                    w_r['E'][m.N_EXC:, :m.N_EXC] += (2e-3 * (i_cell_fr_setpoint - np.sum(rsp.spks[:, m.N_EXC:] > 0, axis=0)) / i_cell_fr_setpoint * w_r['E'][m.N_EXC:, :m.N_EXC])
 
 def quick_plot(m, run_title='', w_r_e=None, w_r_i=None, repeats=1, show_connectivity=True, n_show_only=None, add_noise=True, dropouts=[{'E': 0, 'I': 0}]):
     output_dir_name = f'{run_title}_{time_stamp(s=True)}:{zero_pad(int(np.random.rand() * 9999), 4)}'
