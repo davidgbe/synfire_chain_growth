@@ -52,8 +52,8 @@ M = Generic(
     # syn rev potentials and decay times
     E_E=0, E_I=-.07, E_A=-.07, T_E=.004, T_I=.004, T_A=.006,
     
-    N_EXC=600,
-    N_INH=600,
+    N_EXC=1200,
+    N_INH=1200,
     
     DRIVING_HZ=5., # 2 Hz lambda Poisson input to system
     N_DRIVING_CELLS=1,

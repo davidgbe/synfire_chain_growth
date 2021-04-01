@@ -13,8 +13,10 @@ a_2minus = 7.1
 a_3plus = 6.5
 a_3minus = 0.
 
-def make_vec(t_start, t_b):
-	return np.arange(4) * t_b + t_start
+num_spikes = [2, 4, 6, 8, 10]
+
+def make_vec(t_start, t_b, num_spikes):
+	return np.arange(num_spikes) * t_b + t_start
 
 def compute_stdp(v1, v2):
 	s_a2_minus = 0
@@ -38,53 +40,55 @@ def compute_stdp(v1, v2):
 						s_a3_plus += a_3plus * np.exp(-(t_v2_prime - t_v2)/ tau_triple) * np.exp(-(t_v2_prime - t_v1)/ tau_plus)
 	return s_a2_minus, s_a3_plus
 
-v1 = make_vec(0, t_b)
-
 fig, ax = plt.subplots(1, 1, figsize=(6, 6), tight_layout=True)
 
-t_phases = np.linspace(-2 * t_b, 8 * t_b, 1000)
+for i_s in num_spikes:
 
-std = 0.3e-3
-samples = 1000
+	v1 = make_vec(0, t_b, i_s)
 
-noises_1 = [np.random.normal(0, std, 4) for x in range(samples)]
-noises_2 = [np.random.normal(0, std, 4) for x in range(samples)]
+	t_phases = np.linspace(-2 * t_b, 8 * t_b, 1000)
 
-all_s = np.zeros((samples, t_phases.shape[0]))
-all_s_a2_minus = np.zeros((samples, t_phases.shape[0]))
-all_s_a3_plus = np.zeros((samples, t_phases.shape[0]))
+	std = 0.3e-3
+	samples = 10
 
-for i, (noise_i, noise_j) in enumerate(zip(noises_1, noises_2)):
+	noises_1 = [np.random.normal(0, std, i_s) for x in range(samples)]
+	noises_2 = [np.random.normal(0, std, i_s) for x in range(samples)]
 
-	noise_i[0] = 0
-	noise_j[0] = 0
+	all_s = np.zeros((samples, t_phases.shape[0]))
+	all_s_a2_minus = np.zeros((samples, t_phases.shape[0]))
+	all_s_a3_plus = np.zeros((samples, t_phases.shape[0]))
 
-	for i_p, t_phase in enumerate(t_phases):
-		v2 = make_vec(t_phase, t_b)
-		s_a2_minus, s_a3_plus = compute_stdp(v1 + noise_i, v2 + noise_j)
+	for i, (noise_i, noise_j) in enumerate(zip(noises_1, noises_2)):
 
-		all_s[i, i_p] = s_a2_minus + s_a3_plus
-		all_s_a2_minus[i, i_p] = s_a2_minus
-		all_s_a3_plus[i, i_p] = s_a3_plus
+		noise_i[0] = 0
+		noise_j[0] = 0
 
-	# if i == 0:
-	# 	ax.plot(t_phases * 1000, np.array(all_s), label=f'all', c='black', lw=0.5)
-	# 	ax.plot(t_phases * 1000, np.array(all_s_a2_minus), label=f'A2-', c='blue', lw=0.5)
-	# 	ax.plot(t_phases * 1000, np.array(all_s_a3_plus), label=f'A3+', c='red', lw=0.5)
-	# else:
-	# 	ax.plot(t_phases * 1000, np.array(all_s), c='black', lw=0.5)
-	# 	ax.plot(t_phases * 1000, np.array(all_s_a2_minus), c='blue', lw=0.5)
-	# 	ax.plot(t_phases * 1000, np.array(all_s_a3_plus), c='red', lw=0.5)
+		for i_p, t_phase in enumerate(t_phases):
+			v2 = make_vec(t_phase, t_b, i_s)
+			s_a2_minus, s_a3_plus = compute_stdp(v1 + noise_i, v2 + noise_j)
 
-ax.plot(t_phases * 1000, np.mean(all_s, axis=0), label=f'all', c='black', lw=0.5)
-ax.plot(t_phases * 1000, np.mean(all_s_a2_minus, axis=0), label=f'A2-', c='blue', lw=0.5)
-ax.plot(t_phases * 1000, np.mean(all_s_a3_plus, axis=0), label=f'A3+', c='red', lw=0.5)
+			all_s[i, i_p] = s_a2_minus + s_a3_plus
+			all_s_a2_minus[i, i_p] = s_a2_minus
+			all_s_a3_plus[i, i_p] = s_a3_plus
+
+		# if i == 0:
+		# 	ax.plot(t_phases * 1000, np.array(all_s), label=f'all', c='black', lw=0.5)
+		# 	ax.plot(t_phases * 1000, np.array(all_s_a2_minus), label=f'A2-', c='blue', lw=0.5)
+		# 	ax.plot(t_phases * 1000, np.array(all_s_a3_plus), label=f'A3+', c='red', lw=0.5)
+		# else:
+		# 	ax.plot(t_phases * 1000, np.array(all_s), c='black', lw=0.5)
+		# 	ax.plot(t_phases * 1000, np.array(all_s_a2_minus), c='blue', lw=0.5)
+		# 	ax.plot(t_phases * 1000, np.array(all_s_a3_plus), c='red', lw=0.5)
+
+	ax.plot(t_phases * 1000, np.mean(all_s, axis=0), label=f'all', lw=0.5)
+# ax.plot(t_phases * 1000, np.mean(all_s_a2_minus, axis=0), label=f'A2-', c='blue', lw=0.5)
+# ax.plot(t_phases * 1000, np.mean(all_s_a3_plus, axis=0), label=f'A3+', c='red', lw=0.5)
 
 ax.legend()
 ax.set_xlabel('Difference in burst onset time (ms)')
 ax.set_ylabel('Relative STDP')
 
-fig.savefig('stdp_triple_pfister_cortex_pos_lag.png')
+fig.savefig('stdp_triple_pfister_cortex_pos_lag_num_spikes.png')
 
 
 
