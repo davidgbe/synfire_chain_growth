@@ -33,15 +33,20 @@ def uncertainty_plot(ax, x, y, y_stds):
 	ax.fill_between(x, y - y_stds, y + y_stds)
 
 
-def bin_occurrences(occurrences, min_idx=0, max_idx=None, bin_size=1):
-    if max_idx is None:
-        max_idx = occurrences.max() + 1
-    binned = np.zeros(max_idx - min_idx)
-    for n in occurrences:
-        if n >= max_idx or n < min_idx:
-            raise IndexError(f'index {n} is out of bounds for min {min_idx} and max {max_idx}')
-        binned[n - min_idx] += 1
-    return binned
+def bin_occurrences(occurrences, min_val=0, max_val=None, bin_size=1):
+    scaled_occurrences = ((occurrences - min_val) / bin_size).astype(int)
+
+    if max_val is None:
+        max_val = occurrences.max()
+
+    max_idx = int(np.ceil((max_val - min_val) / bin_size)) + 1
+
+    binned = np.zeros(max_idx, dtype=int)
+    for i, n in enumerate(scaled_occurrences):
+        if n >= max_idx or n < 0:
+            raise IndexError(f'val {occurrences[i]} is out of bounds for min {min_val} and max {max_val}')
+        binned[n] += 1
+    return np.arange(max_idx) * bin_size, binned
 
 
 def calc_degree_dist(mat):
