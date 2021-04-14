@@ -297,12 +297,12 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     })
 
                     e_cell_fr_setpoints =  np.sum(rsp.spks[:, :m.N_EXC] > 0, axis=0)
-                else:
+                elif i_e == 1:
                     sio.savemat(robustness_output_dir + '/' + f'title_{title}_dropout_{d_idx}_eidx_{zero_pad(i_e, 4)}', {
                         'first_spk_times': first_spk_times,
                         'w_r_e': rsp.ntwk.w_r['E'],
                     })
-
+                else:
                     if i_e == 2:
                         active_synapses = np.where(w_r['E'][:m.N_EXC, :m.N_EXC] > 0, 1, 0)
 
@@ -318,6 +318,12 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     w_r['E'][:m.N_EXC, :m.N_EXC] += (3e-7 * diffs * active_synapses)
                     w_r['E'][:m.N_EXC, :m.N_EXC][w_r['E'][:m.N_EXC, :m.N_EXC] < 0] = 0
                     # w_r['E'][:m.N_EXC, :m.N_EXC][w_r['E'][:m.N_EXC, :m.N_EXC] > 3 * m.W_INITIAL] = 3 * m.W_INITIAL
+
+                    if i_e % 10 == 0:
+                        sio.savemat(robustness_output_dir + '/' + f'title_{title}_dropout_{d_idx}_eidx_{zero_pad(i_e, 4)}', {
+                            'first_spk_times': first_spk_times,
+                            'w_r_e': rsp.ntwk.w_r['E'],
+                        })
 
 def quick_plot(m, run_title='', w_r_e=None, w_r_i=None, repeats=1, show_connectivity=True, n_show_only=None, add_noise=True, dropouts=[{'E': 0, 'I': 0}]):
     output_dir_name = f'{run_title}_{time_stamp(s=True)}:{zero_pad(int(np.random.rand() * 9999), 4)}'
