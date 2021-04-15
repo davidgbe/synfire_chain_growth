@@ -309,7 +309,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     diffs = e_cell_fr_setpoints - np.sum(rsp.spks[:, :m.N_EXC] > 0, axis=0)
                     diffs[(diffs <= 1) & (diffs >= -1)] = 0
                     diffs[diffs > 1] = 1
-                    diffs[diffs < 1] = -1
+                    diffs[diffs < -1] = -1
 
                     diffs[:m.DROPOUT_MIN_IDX] = 0
                     diffs[m.DROPOUT_MAX_IDX:] = 0
