@@ -314,7 +314,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     diffs[:m.DROPOUT_MIN_IDX] = 0
                     diffs[m.DROPOUT_MAX_IDX:] = 0
 
-                    w_r['E'][:m.N_EXC, :m.N_EXC] += (5e-7 * diffs * active_synapses)
+                    w_r['E'][:m.N_EXC, :m.N_EXC] += (5e-6 * diffs.reshape(diffs.shape[0], 1) * active_synapses)
                     w_r['E'][:m.N_EXC, :m.N_EXC][w_r['E'][:m.N_EXC, :m.N_EXC] < 0] = 0
                     # w_r['E'][:m.N_EXC, :m.N_EXC][w_r['E'][:m.N_EXC, :m.N_EXC] > 3 * m.W_INITIAL] = 3 * m.W_INITIAL
 
