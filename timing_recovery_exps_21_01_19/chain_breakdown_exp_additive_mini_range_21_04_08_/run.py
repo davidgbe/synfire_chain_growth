@@ -303,7 +303,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     })
 
                     diffs = e_cell_fr_setpoints - np.sum(rsp.spks[:, :m.N_EXC] > 0, axis=0)
-                    win_size_over = 6
+                    win_size_over = 1
                     win_size_under = 1
                     diffs[diffs < -1 * win_size_over] = diffs[diffs < -1 * win_size_over] + win_size_over
                     diffs[diffs > win_size_under] = diffs[diffs > win_size_under] - win_size_under
@@ -311,7 +311,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     diffs[:m.DROPOUT_MIN_IDX] = 0
                     diffs[m.DROPOUT_MAX_IDX:] = 0
 
-                    w_r['E'][:m.N_EXC, :m.N_EXC] += (5e-6 * diffs * np.where(w_r['E'][:m.N_EXC, :m.N_EXC] > 0, 1, 0))
+                    w_r['E'][:m.N_EXC, :m.N_EXC] += (5e-7 * diffs.reshape(diffs.shape[0], 1) * np.where(w_r['E'][:m.N_EXC, :m.N_EXC] > 0, 1, 0))
                     # w_r['E'][:m.N_EXC, :m.N_EXC][w_r['E'][:m.N_EXC, :m.N_EXC] > 3 * m.W_INITIAL] = 3 * m.W_INITIAL
 
 def quick_plot(m, run_title='', w_r_e=None, w_r_i=None, repeats=1, show_connectivity=True, n_show_only=None, add_noise=True, dropouts=[{'E': 0, 'I': 0}]):

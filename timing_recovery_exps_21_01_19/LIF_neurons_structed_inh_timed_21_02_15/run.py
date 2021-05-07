@@ -498,7 +498,7 @@ m2.ETA = 0.000001
 m2.GAMMA = 0. # deprecated
 
 m2.W_A = args.w_a[0] # 5e-4 
-m2.W_E_I_R = 2.5e-5
+m2.W_E_I_R = 3e-5
 m2.W_I_E_R = 0.8e-5
 m2.T_R_E = 1e-3
 m2.W_MAX = 0.26 * 0.004 * 1.4
@@ -544,9 +544,4 @@ title = f'noise_ff_{clip(m2.W_INITIAL / (0.26 * 0.004))}_pf_{clip(m2.CON_PROB_FF
 for i in range(50):
     all_rsps = quick_plot(m2, run_title=title, dropouts=[
         {'E': 0, 'I': 0},
-        {'E': 0.1, 'I': 0},
-        {'E': 0.2, 'I': 0},
-        {'E': 0.3, 'I': 0},
-        {'E': 0.35, 'I': 0},
-        {'E': 0.4, 'I': 0},
     ])

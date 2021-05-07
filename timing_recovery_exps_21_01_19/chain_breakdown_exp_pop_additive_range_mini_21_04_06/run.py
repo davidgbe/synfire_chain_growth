@@ -52,12 +52,12 @@ M = Generic(
     # syn rev potentials and decay times
     E_E=0, E_I=-.07, E_A=-.07, T_E=.004, T_I=.004, T_A=.006,
     
-    N_EXC=600,
-    N_INH=100,
+    N_EXC=1200,
+    N_INH=600,
     
     DRIVING_HZ=2, # 2 Hz lambda Poisson input to system
     N_DRIVING_CELLS=1,
-    PROJECTION_NUM=30,
+    PROJECTION_NUM=20,
     
     # OTHER INPUTS
     SGM_N=.5e-10,  # noise level (A*sqrt(s))
@@ -324,7 +324,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
                     diff = e_cell_fr_setpoint - np.sum(rsp.spks[:, surviving_cell_indices.nonzero()[0]] > 0)
                     
-                    w_r['E'][:m.N_EXC, :m.N_EXC] += (0.5e-6 * diff / 1200 * active_connections)
+                    w_r['E'][:m.N_EXC, :m.N_EXC] += (1e-6 * diff / 1200 * active_connections)
                     w_r['E'][:m.N_EXC, :m.N_EXC][active_connections_mask & (w_r['E'][:m.N_EXC, :m.N_EXC] <= 0)] = 1e-8
 
                     w_r['E'][:m.N_EXC, :m.N_EXC][w_r['E'][:m.N_EXC, :m.N_EXC] > 10 * m.W_INITIAL/m.PROJECTION_NUM] = 10 * m.W_INITIAL/m.PROJECTION_NUM
@@ -354,13 +354,13 @@ m2.ETA = 0.000001
 m2.GAMMA = 0. # deprecated
 
 m2.W_A = args.w_a[0] # 5e-4 
-m2.W_E_I_R = 2e-5
+m2.W_E_I_R = 1.8e-5
 m2.W_I_E_R = 0.3e-5 # 0.5e-5
 m2.T_R_E = 1e-3
 m2.W_MAX = 0.26 * 0.004 * 10
-m2.W_INITIAL = 0.26 * 0.004 * 0.5 * .6/.3
-m2.W_U_E = 0.26 * 0.004 * .35
-m2.M = 30
+m2.W_INITIAL = 0.26 * 0.004 * 0.8
+m2.W_U_E = 0.26 * 0.004 * .15
+m2.M = 20
 
 m2.ALPHA = args.fr_penalty[0] # 1.5e-3
 m2.STDP_SCALE = args.stdp_scale[0] # 0.00001
@@ -371,9 +371,9 @@ m2.RAND_WEIGHT_MAX = m2.W_INITIAL / (m2.M * m2.N_EXC)
 m2.DROPOUT_TIME = 0.295
 
 m2.BURST_T = 2e-3
-m2.CON_PROB_FF = 0.3
+m2.CON_PROB_FF = 0.4
 m2.CON_PROB_R = 0.
-m2.E_I_CON_PER_LINK = 0.2
+m2.E_I_CON_PER_LINK = 0.17
 
 m2.INPUT_STD = 1e-3
 

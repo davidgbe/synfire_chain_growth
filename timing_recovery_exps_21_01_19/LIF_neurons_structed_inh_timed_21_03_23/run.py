@@ -282,7 +282,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
             # now, redesign our I --> E connections to reflect an anti-Hebbian STDP rule
             tau_pocket_end = 3e-3 # 3 ms
-            tau_pocket_start = -1e-3
+            tau_pocket_start = -5e-3
             inh_cell_to_pocket_exc_cell = np.zeros((m.N_EXC, m.N_INH))
 
             for i_spk_idx in range(inh_raster.shape[1]):
@@ -504,11 +504,11 @@ m2.ETA = 0.000001
 m2.GAMMA = 0. # deprecated
 
 m2.W_A = args.w_a[0] # 5e-4 
-m2.W_E_I_R = 2e-5
-m2.W_I_E_R = 0.4e-5 # 0.5e-5
+m2.W_E_I_R = 3.2e-5
+m2.W_I_E_R = 0.3e-5 # 0.5e-5
 m2.T_R_E = 1e-3
 m2.W_MAX = 0.26 * 0.004 * 3
-m2.W_INITIAL = 0.26 * 0.004 * 0.9
+m2.W_INITIAL = 0.26 * 0.004 * 0.8
 m2.W_U_E = 0.26 * 0.004 * .35
 m2.M = 10
 
@@ -548,8 +548,6 @@ print(m2.W_E_I_R * 1e5)
 
 title = f'noise_ff_{clip(m2.W_INITIAL / (0.26 * 0.004))}_pf_{clip(m2.CON_PROB_FF, 3)}_pr_{clip(m2.CON_PROB_R, 3)}_eir_{clip(m2.W_E_I_R * 1e5)}_ier_{clip(m2.W_I_E_R * 1e5)}_dropout_sweep'
 
-
-
 for i in range(1): 
-    dropouts = [{'E': 0.05 * step, 'I': 0} for step in range(15)]
+    dropouts = [{'E': 0, 'I': 0}]
     all_rsps = quick_plot(m2, run_title=title, dropouts=dropouts)
