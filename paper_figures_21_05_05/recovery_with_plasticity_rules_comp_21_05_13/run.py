@@ -25,10 +25,6 @@ cc = np.concatenate
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--title', metavar='T', type=str, nargs=1)
-parser.add_argument('--w_a', metavar='A', type=float, nargs=1)
-parser.add_argument('--fr_penalty', metavar='P', type=float, nargs=1)
-parser.add_argument('--stdp_scale', metavar='S', type=float, nargs=1)
-parser.add_argument('--beta', metavar='S', type=float, nargs=1)
 
 args = parser.parse_args()
 
@@ -40,7 +36,7 @@ M = Generic(
     G_L_E=.4e-3,  # membrane leak conductance (T_M (s) = C_M (F/cm^2) / G_L (S/cm^2))
     E_L_E=-.06,  # membrane leak potential (V)
     V_TH_E=-.05,  # membrane spike threshold (V)
-    T_R_E=2e-3,  # refractory period (s)
+    T_R_E=1e-3,  # refractory period (s)
     E_R_E=-0.06, # reset voltage (V)
     
     # Inhibitory membrane
@@ -56,18 +52,56 @@ M = Generic(
     N_EXC=900,
     N_SILENT=0,
     N_INH=450,
+    M=20,
     
+    # Input params
     DRIVING_HZ=2, # 2 Hz lambda Poisson input to system
     N_DRIVING_CELLS=20,
     PROJECTION_NUM=20,
+    INPUT_STD=1e-3,
+    BURST_T=1.5e-3,
     
     # OTHER INPUTS
     SGM_N=.5e-10,  # noise level (A*sqrt(s))
     I_EXT_B=0,  # additional baseline current input
+
+    # Connection probabilities
+    CON_PROB_FF=0.6,
+    CON_PROB_R=0.,
+    E_I_CON_PER_LINK=1,
+    I_E_CON_PROB=0.7,
+
+    # Weights
+    W_E_I_R=2e-5,
+    W_I_E_R=0.3e-5,
+    W_A=0,
+    W_MAX=0.26 * 0.004 * 10,
+    W_INITIAL=0.26 * 0.004 * 1.0,
+
+    # Dropout params
+    DROPOUT_MIN_IDX=0,
+    DROPOUT_ITER=10,
+
+    # Synaptic plasticity params
+    TAU_STDP_PAIR=30e-3,
+    SINGLE_CELL_FR_SETPOINT_MIN=5,
+    ETA=0.1,
+    ALPHA=3e-2,
+    BETA=1e-3,
+    GAMMA=1e-4,
 )
 
+S = Generic(RNG_SEED=0, DT=0.2e-3, T=300e-3, EPOCHS=100)
+
+M.RAND_WEIGHT_MAX = M.W_INITIAL / (M.M * M.N_EXC)
+M.W_U_E = M.W_INITIAL / M.PROJECTION_NUM * 1.5
+
+M.CUT_IDX_TAU_PAIR = int(2 * M.TAU_STDP_PAIR / S.DT)
+M.KERNEL_PAIR = np.exp(-np.arange(M.CUT_IDX_TAU_PAIR) * S.DT / M.TAU_STDP_PAIR).astype(float)
+
+M.DROPOUT_MAX_IDX = M.N_EXC + M.N_SILENT
+
 ## SMLN
-S = Generic(RNG_SEED=0, DT=0.1e-3)
 
 print('T_M_E =', 1000*M.C_M_E/M.G_L_E, 'ms')  # E cell membrane time constant (C_m/g_m)
 
@@ -201,12 +235,14 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
             active_cells_pre_dropout_mask = None
             surviving_cell_indices = None
 
+            w_r_copy = copy(w_r)
+
             for i_e in range(epochs):
 
                 if i_e == m.DROPOUT_ITER:
-                    w_r['E'][:, :(m.N_EXC + m.N_SILENT)], surviving_cell_indices = dropout_on_mat(w_r['E'][:, :(m.N_EXC + m.N_SILENT)], dropout['E'], min_idx=m.DROPOUT_MIN_IDX, max_idx=m.DROPOUT_MAX_IDX)
+                    w_r_copy['E'][:, :(m.N_EXC + m.N_SILENT)], surviving_cell_indices = dropout_on_mat(w_r_copy['E'][:, :(m.N_EXC + m.N_SILENT)], dropout['E'], min_idx=m.DROPOUT_MIN_IDX, max_idx=m.DROPOUT_MAX_IDX)
 
-                t = np.arange(0, S.T1, S.DT)
+                t = np.arange(0, S.T, S.DT)
 
                 ## external currents
                 if add_noise:
@@ -219,7 +255,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
                 # trigger inputs
                 activation_times = np.zeros((len(t), m.N_DRIVING_CELLS))
-                for t_ctr in np.arange(0, S.T1, 1./m.DRIVING_HZ):
+                for t_ctr in np.arange(0, S.T, 1./m.DRIVING_HZ):
                     activation_times[int(t_ctr/S.DT), :] = 1
 
                 np.concatenate([np.random.poisson(m.DRIVING_HZ * S.DT, size=(len(t), 1)) for i in range(m.N_DRIVING_CELLS)], axis=1)
@@ -243,23 +279,14 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     t_r=m.T_R_E,
                     e_s={'E': M.E_E, 'I': M.E_I, 'A': M.E_A},
                     t_s={'E': M.T_E, 'I': M.T_E, 'A': M.T_A},
-                    w_r=copy(w_r),
-                    w_u=copy(w_u),
+                    w_r=w_r_copy,
+                    w_u=w_u,
                     plasticity_indices=np.arange(m.N_EXC),
                     connectivity=connectivity,
                     W_max=m.W_MAX,
                     m=m.M,
-                    eta=m.ETA,
-                    epsilon=m.EPSILON,
-                    dt=S.DT,
-                    gamma=m.GAMMA,
-                    alpha=m.ALPHA,
-                    fr_set_points=m.FR_SET_POINTS,
-                    stdp_scale=m.STDP_SCALE,
-                    beta=m.BETA,
                     output=False,
                     output_freq=100000,
-                    homeo=False,
                     weight_update=False,
                 )
 
@@ -280,7 +307,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 if surviving_cell_indices is not None:
                     spks_for_e_cells[:, ~(surviving_cell_indices.astype(bool))] = 0
 
-                spk_bins, freqs = bin_occurrences(spks_for_e_cells.sum(axis=0), max_val=40, bin_size=1)
+                spk_bins, freqs = bin_occurrences(spks_for_e_cells.sum(axis=0), max_val=100, bin_size=1)
                 if surviving_cell_indices is not None:
                     freqs[0] -= np.sum(np.where(~(surviving_cell_indices.astype(bool)), 1, 0))
 
@@ -333,7 +360,8 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         'inh_raster': inh_raster,
                     })
 
-                    e_cell_fr_setpoints = np.random.normal(loc=5, scale=2.2, size=(m.N_EXC + m.N_SILENT))
+                    e_cell_fr_setpoints = np.sum(spks_for_e_cells > 0, axis=0)
+                    e_cell_fr_setpoints[e_cell_fr_setpoints < m.SINGLE_CELL_FR_SETPOINT_MIN] = m.SINGLE_CELL_FR_SETPOINT_MIN
                 else:
                     if i_e >= m.DROPOUT_ITER:
                         spks_for_e_cells[:, ~surviving_cell_indices.astype(int)] = 0
@@ -392,26 +420,23 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     else:
                         fr_update = 0
 
-                    # print((1e-2 * fr_update).min())
-                    # print((1e-2 * stdp_burst_pair).max())
-                    total_potentiation = 0.1 * (3e-2 * fr_update + 1e-3 * stdp_burst_pair + 1e-4 * fr_pop_update)
-
+                    total_potentiation = m.ETA * (m.ALPHA * fr_update + m.BETA * stdp_burst_pair + m.GAMMA * fr_pop_update)
 
                     total_potentiation[:m.DROPOUT_MIN_IDX, :] = 0
                     total_potentiation[m.DROPOUT_MAX_IDX:, :] = 0
                     total_potentiation[:, :m.DROPOUT_MIN_IDX] = 0
                     total_potentiation[:, m.DROPOUT_MAX_IDX:] = 0
 
-                    w_r['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] += (total_potentiation * w_r['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)])
-                    w_r['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)][w_r['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] < 0] = 0
+                    w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] += (total_potentiation * w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)])
+                    w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] < 0] = 0
 
                     hard_bound = m.W_INITIAL / m.PROJECTION_NUM * 10
-                    w_r['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)][w_r['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] > hard_bound] = hard_bound 
+                    w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] > hard_bound] = hard_bound 
 
                     if i_e == m.DROPOUT_ITER - 1:
                         active_cells_pre_dropout_mask = np.where(spks_for_e_cells.sum(axis=0) > 0, True, False)
 
-                    if i_e % 1 == 0:
+                    if i_e % 20 == 0:
                         if i_e < m.DROPOUT_ITER:
                             sio.savemat(robustness_output_dir + '/' + f'title_{title}_dropout_{d_idx}_eidx_{zero_pad(i_e, 4)}', {
                                 'first_spk_times': first_spk_times,
@@ -439,7 +464,7 @@ def quick_plot(m, run_title='', w_r_e=None, w_r_i=None, repeats=1, show_connecti
 
     run_test(m, output_dir_name=output_dir_name, show_connectivity=show_connectivity,
                         repeats=repeats, n_show_only=n_show_only, add_noise=add_noise, dropouts=dropouts,
-                        w_r_e=w_r_e, w_r_i=w_r_i)
+                        w_r_e=w_r_e, w_r_i=w_r_i, epochs=S.EPOCHS)
 
 def process_single_activation(exc_raster, m):
     # extract first spikes
@@ -449,50 +474,6 @@ def process_single_activation(exc_raster, m):
         if np.isnan(first_spk_times[nrn_idx]):
             first_spk_times[nrn_idx] = exc_raster[0, i]
     return first_spk_times
-
-S.T1 = 0.3
-S.DT = 0.2e-3
-m2 = copy(M)
-
-m2.EPSILON = 0. # deprecated
-m2.ETA = 0.000001
-m2.GAMMA = 0. # deprecated
-
-m2.W_A = args.w_a[0] # 5e-4 
-m2.W_E_I_R = 2e-5
-m2.W_I_E_R = 0.3e-5 # 0.5e-5
-m2.T_R_E = 1e-3
-m2.W_MAX = 0.26 * 0.004 * 10
-m2.W_INITIAL = 0.26 * 0.004 * 1.0
-m2.W_U_E = m2.W_INITIAL / m2.PROJECTION_NUM * 1.5
-m2.M = 20
-
-m2.ALPHA = args.fr_penalty[0] # 1.5e-3
-m2.STDP_SCALE = args.stdp_scale[0] # 0.00001
-m2.BETA = args.beta[0]
-m2.FR_SET_POINTS = 4. * m2.DRIVING_HZ * S.DT
-
-m2.TAU_STDP_PAIR = 30e-3
-m2.CUT_IDX_TAU_PAIR = int(2 * m2.TAU_STDP_PAIR / S.DT)
-m2.KERNEL_PAIR = np.exp(-np.arange(m2.CUT_IDX_TAU_PAIR) * S.DT / m2.TAU_STDP_PAIR).astype(float)
-
-m2.RAND_WEIGHT_MAX = m2.W_INITIAL / (m2.M * m2.N_EXC)
-m2.DROPOUT_MIN_IDX = 0
-m2.DROPOUT_MAX_IDX = m2.N_EXC + m2.N_SILENT
-m2.DROPOUT_ITER = 100
-
-m2.BURST_T = 1.5e-3
-m2.CON_PROB_FF = 0.6
-m2.CON_PROB_R = 0.
-m2.E_I_CON_PER_LINK = 1
-m2.I_E_CON_PROB = 0.7
-
-m2.INPUT_STD = 1e-3
-
-# c_m = np.zeros((300))
-# c_m[:150] = m2.C_M_E
-# c_m[150:] = m2.C_M_E * np.random.rand(150) + 0.75 * m2.C_M_E
-# m2.C_M_E = c_m
 
 def load_weight_matrices(direc, num):
     file_names = sorted(all_files_from_dir(direc))
@@ -505,11 +486,13 @@ def clip(f, n=1):
     f_str = f_str[:(f_str.find('.') + 1 + n)]
     return f_str
 
-print(m2.W_E_I_R * 1e5)
-
-title = f'all_rules_ff_{clip(m2.W_INITIAL / (0.26 * 0.004))}_pf_{clip(m2.CON_PROB_FF, 2)}_pr_{clip(m2.CON_PROB_R, 2)}_eir_{clip(m2.W_E_I_R * 1e5)}_ier_{clip(m2.W_I_E_R * 1e5)}'
+title = f'all_rules_ff_{clip(M.W_INITIAL / (0.26 * 0.004))}_pf_{clip(M.CON_PROB_FF, 2)}_pr_{clip(M.CON_PROB_R, 2)}_eir_{clip(M.W_E_I_R * 1e5)}_ier_{clip(M.W_I_E_R * 1e5)}'
 
 for i in range(1):
-    all_rsps = quick_plot(m2, run_title=title, dropouts=[
-        {'E': 0.0, 'I': 0},
+    all_rsps = quick_plot(M, run_title=title, dropouts=[
+        {'E': 0.5, 'I': 0},
+        {'E': 0.6, 'I': 0},
+        {'E': 0.7, 'I': 0},
+        {'E': 0.8, 'I': 0},
+        {'E': 0.9, 'I': 0},
     ])

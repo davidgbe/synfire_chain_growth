@@ -16,8 +16,7 @@ cc = np.concatenate
 class LIFNtwkG(object):
     """Network of leaky integrate-and-fire neurons with *conductance-based* synapses."""
     
-    def __init__(self, c_m, g_l, e_l, v_th, v_r, t_r, e_s, t_s, w_r, w_u, plasticity_indices, connectivity, W_max, m, eta,
-        epsilon, dt, gamma, alpha, fr_set_points, stdp_scale, beta,
+    def __init__(self, c_m, g_l, e_l, v_th, v_r, t_r, e_s, t_s, w_r, w_u, plasticity_indices, connectivity, W_max, m,
         sparse=False, output=True, output_freq=1000, homeo=True, weight_update=True):
         # ntwk size
         n = next(iter(w_r.values())).shape[0]
@@ -68,50 +67,8 @@ class LIFNtwkG(object):
         self.w_max = self.W_max / self.m # hard bound on individual synapse strength
         self.output_bound = self.W_max * 2.
 
-        # learning rate params
-        self.eta = eta # overall learning rate
-
-        ###################
-        # STDP params
-        self.a2minus = 7.1e-1 / stdp_scale
-        self.a3plus = 6.5e-1 / stdp_scale      
-        # pairwise params
-        self.tau_stdp_pair = {
-            '+': 16.8e-3, # 16.8 ms
-            '-': 33.7e-3, # 33.7 ms
-        }
-
-        self.cut_idx_tau_pair = int(2 * self.tau_stdp_pair['-'] / dt)
-        self.idxs_tau_pair = np.arange(self.cut_idx_tau_pair)
-
-        self.kernel_pair = {}
-        for sign, tau in self.tau_stdp_pair.items():
-            self.kernel_pair[sign] = np.exp(-self.idxs_tau_pair * dt / self.tau_stdp_pair[sign])
-        
-        # triplet params
-        self.tau_stdp_trip = {
-            '+': 114e-3, # 114 ms
-        }
-
-        self.cut_idx_tau_trip = int(2 * self.tau_stdp_trip['+'] / dt)
-        self.idxs_tau_trip = np.arange(self.cut_idx_tau_trip)
-
-        self.kernel_trip = {}
-        for sign, tau in self.tau_stdp_trip.items():
-            self.kernel_trip[sign] = np.exp(-self.idxs_tau_trip * dt / self.tau_stdp_trip[sign])
-        ###################
-
-        # firing rate params
-        self.homeo = homeo
-        self.alpha = alpha
-        self.tau_fr = 17.5e-3
-        self.fr_set_points = fr_set_points
-        self.beta = beta
-
         self.output = output
         self.output_freq = output_freq
-
-        self.t_hist_lim = int(100e-3 / dt)
 
     def update_w(self, t_ctr, spks, dt, spk_time_hist):
         # STDP update for calculation of delta_stdp(t)
@@ -339,12 +296,11 @@ class LIFNtwkG(object):
                 spks_for_t_ctr = vs[t_ctr, :] >= v_th
                 spks[t_ctr, spks_for_t_ctr] = 1
 
-            stdp_start = t_ctr - self.cut_idx_tau_pair
-            stdp_start = 0 if stdp_start < 0 else stdp_start
-            stdp_spk_hist = spks[stdp_start:(t_ctr + 1), self.plasticity_indices]
-            curr_spks = stdp_spk_hist[-1, :]
-
             if self.weight_update:
+                stdp_start = t_ctr - self.cut_idx_tau_pair
+                stdp_start = 0 if stdp_start < 0 else stdp_start
+                stdp_spk_hist = spks[stdp_start:(t_ctr + 1), self.plasticity_indices]
+                curr_spks = stdp_spk_hist[-1, :]
                 self.update_w(t_ctr, stdp_spk_hist, dt, spk_time_hist)
                 self.update_spk_hist(spk_time_hist, curr_spks, t_ctr)
 
