@@ -1,3 +1,3 @@
 #!/bin/bash
 
-caffeinate python3 run_pop.py --title stability_test --w_a 4e-4 --fr_penalty 0.5 --stdp_scale 10 --beta 2.5
+caffeinate python3 run.py --title pop --alpha 0 --beta 1e-3 --gamma 1e-4 --fr_single_sym False

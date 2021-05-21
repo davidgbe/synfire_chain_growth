@@ -19,8 +19,8 @@ module load contrib/python_3.8/3.8
 ## Commands to run
 cd //gscratch/stf/davidgbe/compneuro
 source davidgbe-env/bin/activate
-cd synfire_chain_growth/timing_recovery_exps_21_01_19/chain_breakdown_exp_const_mini_range_21_04_15
-python run.py --title fr_const --w_a 4e-4 --fr_penalty 0.5 --stdp_scale 10 --beta 2.5
+cd synfire_chain_growth/paper_figures_21_05_05/recovery_with_plasticity_rules_comp_21_05_13
+python run.py --title single_cell --alpha 3e-2 --beta 1e-3 --gamma 0 --fr_single_sym True
 deactivate
 
 ## Exit

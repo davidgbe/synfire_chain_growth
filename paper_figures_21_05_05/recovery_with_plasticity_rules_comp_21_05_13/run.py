@@ -25,8 +25,14 @@ cc = np.concatenate
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--title', metavar='T', type=str, nargs=1)
+parser.add_argument('--alpha', metavar='a', type=float, nargs=1)
+parser.add_argument('--beta', metavar='b', type=float, nargs=1)
+parser.add_argument('--gamma', metavar='c', type=float, nargs=1)
+parser.add_argument('--fr_single_sym', metavar='s', type=bool, nargs=1)
 
 args = parser.parse_args()
+
+print(args)
 
 # PARAMS
 ## NEURON AND NETWORK MODEL
@@ -34,20 +40,21 @@ M = Generic(
     # Excitatory membrane
     C_M_E=1e-6,  # membrane capacitance
     G_L_E=.4e-3,  # membrane leak conductance (T_M (s) = C_M (F/cm^2) / G_L (S/cm^2))
-    E_L_E=-.06,  # membrane leak potential (V)
-    V_TH_E=-.05,  # membrane spike threshold (V)
+    E_L_E=-.067,  # membrane leak potential (V)
+    V_TH_E=-.043,  # membrane spike threshold (V)
     T_R_E=1e-3,  # refractory period (s)
-    E_R_E=-0.06, # reset voltage (V)
+    E_R_E=-0.067, # reset voltage (V)
     
     # Inhibitory membrane
-    #C_M_I=1e-6,
-    #G_L_E=.1e-3, 
-    #E_L_I=-.06,
-    #V_TH_E=-.05,
-    #T_R_I=.002,
+    C_M_I=1e-6,
+    G_L_I=.4e-3, 
+    E_L_I=-.057,
+    V_TH_I=-.043,
+    T_R_I=1e-3,
+    E_R_I=-.057, # reset voltage (V)
     
     # syn rev potentials and decay times
-    E_E=0, E_I=-.07, E_A=-.07, T_E=.004, T_I=.004, T_A=.006,
+    E_E=0, E_I=-.09, E_A=-.07, T_E=.004, T_I=.004, T_A=.006,
     
     N_EXC=900,
     N_SILENT=0,
@@ -69,32 +76,33 @@ M = Generic(
     CON_PROB_FF=0.6,
     CON_PROB_R=0.,
     E_I_CON_PER_LINK=1,
-    I_E_CON_PROB=0.7,
+    I_E_CON_PROB=0.8,
 
     # Weights
     W_E_I_R=2e-5,
     W_I_E_R=0.3e-5,
     W_A=0,
     W_MAX=0.26 * 0.004 * 10,
-    W_INITIAL=0.26 * 0.004 * 1.0,
+    W_INITIAL=0.26 * 0.004 * 1.6,
 
     # Dropout params
     DROPOUT_MIN_IDX=0,
-    DROPOUT_ITER=10,
+    DROPOUT_ITER=100,
 
     # Synaptic plasticity params
     TAU_STDP_PAIR=30e-3,
     SINGLE_CELL_FR_SETPOINT_MIN=5,
-    ETA=0.1,
-    ALPHA=3e-2,
-    BETA=1e-3,
-    GAMMA=1e-4,
+    SINGLE_CELL_FR_SYM=args.fr_single_sym[0],
+    ETA=1,
+    ALPHA=args.alpha[0], #3e-2
+    BETA=args.beta[0], #1e-3,
+    GAMMA=args.gamma[0], #1e-4,
 )
 
-S = Generic(RNG_SEED=0, DT=0.2e-3, T=300e-3, EPOCHS=100)
+S = Generic(RNG_SEED=0, DT=0.2e-3, T=300e-3, EPOCHS=800)
 
 M.RAND_WEIGHT_MAX = M.W_INITIAL / (M.M * M.N_EXC)
-M.W_U_E = M.W_INITIAL / M.PROJECTION_NUM * 1.5
+M.W_U_E = M.W_INITIAL / M.PROJECTION_NUM * 2
 
 M.CUT_IDX_TAU_PAIR = int(2 * M.TAU_STDP_PAIR / S.DT)
 M.KERNEL_PAIR = np.exp(-np.arange(M.CUT_IDX_TAU_PAIR) * S.DT / M.TAU_STDP_PAIR).astype(float)
@@ -270,13 +278,23 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     except IndexError as e:
                         pass
 
+                def create_prop(prop_exc, prop_inh):
+                    return cc([prop_exc * np.ones(m.N_EXC), prop_inh * np.ones(m.N_INH)])
+
+                c_m = create_prop(m.C_M_E, m.C_M_I)
+                g_l = create_prop(m.G_L_E, m.G_L_I)
+                e_l = create_prop(m.E_L_E, m.E_L_I)
+                v_th = create_prop(m.V_TH_E, m.V_TH_I)
+                e_r = create_prop(m.E_R_E, m.E_R_I)
+                t_r = create_prop(m.T_R_E, m.T_R_I)
+
                 ntwk = LIFNtwkG(
-                    c_m=m.C_M_E,
-                    g_l=m.G_L_E,
-                    e_l=m.E_L_E,
-                    v_th=m.V_TH_E,
-                    v_r=m.E_R_E,
-                    t_r=m.T_R_E,
+                    c_m=c_m,
+                    g_l=g_l,
+                    e_l=e_l,
+                    v_th=v_th,
+                    v_r=e_r,
+                    t_r=t_r,
                     e_s={'E': M.E_E, 'I': M.E_I, 'A': M.E_A},
                     t_s={'E': M.T_E, 'I': M.T_E, 'A': M.T_A},
                     w_r=w_r_copy,
@@ -339,7 +357,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 axs[0].scatter(inh_raster[0, :] * 1000, inh_raster[1, :], s=1, c='red', zorder=0, alpha=1)
 
                 axs[0].set_ylim(-1, m.N_EXC + m.N_INH)
-                axs[0].set_xlim(0, 0.12 * 1000)
+                axs[0].set_xlim(0, 0.15 * 1000)
                 axs[0].set_ylabel('Cell Index')
                 axs[0].set_xlabel('Time (ms)')
 
@@ -349,11 +367,12 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
                 first_spk_times = process_single_activation(exc_raster, m)
 
+
+
                 if i_e == 0:
                     sio.savemat(robustness_output_dir + '/' + f'title_{title}_dropout_{d_idx}_eidx_{zero_pad(i_e, 4)}', {
                         'first_spk_times': first_spk_times,
-                        'w_r_e': rsp.ntwk.w_r['E'],
-                        'w_r_i': rsp.ntwk.w_r['I'],
+                        'w_r_e_summed': np.sum(rsp.ntwk.w_r['E'][:m.N_EXC, :m.N_EXC], axis=1),
                         'spk_bins': spk_bins,
                         'freqs': freqs,
                         'exc_raster': exc_raster,
@@ -361,7 +380,8 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     })
 
                     e_cell_fr_setpoints = np.sum(spks_for_e_cells > 0, axis=0)
-                    e_cell_fr_setpoints[e_cell_fr_setpoints < m.SINGLE_CELL_FR_SETPOINT_MIN] = m.SINGLE_CELL_FR_SETPOINT_MIN
+                    if not m.SINGLE_CELL_FR_SYM:
+                        e_cell_fr_setpoints[e_cell_fr_setpoints < m.SINGLE_CELL_FR_SETPOINT_MIN] = m.SINGLE_CELL_FR_SETPOINT_MIN
                 else:
                     if i_e >= m.DROPOUT_ITER:
                         spks_for_e_cells[:, ~surviving_cell_indices.astype(int)] = 0
@@ -414,8 +434,10 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     # individual firing rate update
                     if e_cell_fr_setpoints is not None:
                         diffs = e_cell_fr_setpoints - np.sum(spks_for_e_cells > 0, axis=0)
-                        diffs[(diffs <= 1) & (diffs >= -1)] = 0
-                        # diffs[diffs >= -1] = 0
+                        if m.SINGLE_CELL_FR_SYM:
+                            diffs[(diffs <= 1) & (diffs >= -1)] = 0
+                        else:
+                            diffs[diffs >= -1] = 0
                         fr_update = diffs.reshape(diffs.shape[0], 1) * np.ones((m.N_EXC + m.N_SILENT, m.N_EXC + m.N_SILENT)).astype(float)
                     else:
                         fr_update = 0
@@ -436,11 +458,11 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     if i_e == m.DROPOUT_ITER - 1:
                         active_cells_pre_dropout_mask = np.where(spks_for_e_cells.sum(axis=0) > 0, True, False)
 
-                    if i_e % 20 == 0:
+                    if i_e % 10 == 0:
                         if i_e < m.DROPOUT_ITER:
                             sio.savemat(robustness_output_dir + '/' + f'title_{title}_dropout_{d_idx}_eidx_{zero_pad(i_e, 4)}', {
                                 'first_spk_times': first_spk_times,
-                                'w_r_e': rsp.ntwk.w_r['E'],
+                                'w_r_e_summed': np.sum(rsp.ntwk.w_r['E'][:m.N_EXC, :m.N_EXC], axis=1),
                                 'spk_bins': spk_bins,
                                 'freqs': freqs,
                                 'exc_raster': exc_raster,
@@ -449,7 +471,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         else:
                             sio.savemat(robustness_output_dir + '/' + f'title_{title}_dropout_{d_idx}_eidx_{zero_pad(i_e, 4)}', {
                                 'first_spk_times': first_spk_times,
-                                'w_r_e': rsp.ntwk.w_r['E'],
+                                'w_r_e_summed': np.sum(rsp.ntwk.w_r['E'][:m.N_EXC, :m.N_EXC], axis=1),
                                 'spk_bins': spk_bins,
                                 'freqs': freqs,
                                 'exc_cells_initially_active': exc_cells_initially_active,
@@ -486,7 +508,7 @@ def clip(f, n=1):
     f_str = f_str[:(f_str.find('.') + 1 + n)]
     return f_str
 
-title = f'all_rules_ff_{clip(M.W_INITIAL / (0.26 * 0.004))}_pf_{clip(M.CON_PROB_FF, 2)}_pr_{clip(M.CON_PROB_R, 2)}_eir_{clip(M.W_E_I_R * 1e5)}_ier_{clip(M.W_I_E_R * 1e5)}'
+title = f'{args.title[0]}_ff_{clip(M.W_INITIAL / (0.26 * 0.004))}_pf_{clip(M.CON_PROB_FF, 2)}_pr_{clip(M.CON_PROB_R, 2)}_eir_{clip(M.W_E_I_R * 1e5)}_ier_{clip(M.W_I_E_R * 1e5)}'
 
 for i in range(1):
     all_rsps = quick_plot(M, run_title=title, dropouts=[
