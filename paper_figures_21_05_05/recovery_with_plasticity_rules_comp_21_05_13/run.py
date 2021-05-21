@@ -29,6 +29,7 @@ parser.add_argument('--alpha', metavar='a', type=float, nargs=1)
 parser.add_argument('--beta', metavar='b', type=float, nargs=1)
 parser.add_argument('--gamma', metavar='c', type=float, nargs=1)
 parser.add_argument('--fr_single_sym', metavar='s', type=bool, nargs=1)
+parser.add_argument('--rng_seed', metavar='r', type=int, nargs=1)
 
 args = parser.parse_args()
 
@@ -49,7 +50,7 @@ M = Generic(
     C_M_I=1e-6,
     G_L_I=.4e-3, 
     E_L_I=-.057,
-    V_TH_I=-.043,
+    V_TH_I=-.05,
     T_R_I=1e-3,
     E_R_I=-.057, # reset voltage (V)
     
@@ -73,7 +74,7 @@ M = Generic(
     I_EXT_B=0,  # additional baseline current input
 
     # Connection probabilities
-    CON_PROB_FF=0.6,
+    CON_PROB_FF=0.7,
     CON_PROB_R=0.,
     E_I_CON_PER_LINK=1,
     I_E_CON_PROB=0.8,
@@ -87,19 +88,20 @@ M = Generic(
 
     # Dropout params
     DROPOUT_MIN_IDX=0,
-    DROPOUT_ITER=100,
+    DROPOUT_ITER=10,
 
     # Synaptic plasticity params
     TAU_STDP_PAIR=30e-3,
     SINGLE_CELL_FR_SETPOINT_MIN=5,
     SINGLE_CELL_FR_SYM=args.fr_single_sym[0],
-    ETA=1,
+    ETA=0.1,
     ALPHA=args.alpha[0], #3e-2
     BETA=args.beta[0], #1e-3,
     GAMMA=args.gamma[0], #1e-4,
 )
 
-S = Generic(RNG_SEED=0, DT=0.2e-3, T=180e-3, EPOCHS=800)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=180e-3, EPOCHS=800)
+np.random.seed(S.RNG_SEED)
 
 M.RAND_WEIGHT_MAX = M.W_INITIAL / (M.M * M.N_EXC)
 M.W_U_E = M.W_INITIAL / M.PROJECTION_NUM * 2

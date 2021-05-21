@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## Presets
-#SBATCH --job-name=syn_growth
+#SBATCH --job-name=all_rules
 
 #SBATCH -p stf
 #SBATCH -A stf
@@ -20,7 +20,7 @@ module load contrib/python_3.8/3.8
 cd //gscratch/stf/davidgbe/compneuro
 source davidgbe-env/bin/activate
 cd synfire_chain_growth/paper_figures_21_05_05/recovery_with_plasticity_rules_comp_21_05_13
-python run.py --title all_rules --alpha 3e-2 --beta 1e-3 --gamma 1e-4 --fr_single_sym False
+python run.py --title all_rules --alpha 3e-2 --beta 1e-3 --gamma 1e-4 --fr_single_sym False --rng_seed SEED
 deactivate
 
 ## Exit
