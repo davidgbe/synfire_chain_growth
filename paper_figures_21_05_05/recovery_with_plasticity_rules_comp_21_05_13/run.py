@@ -99,7 +99,7 @@ M = Generic(
     GAMMA=args.gamma[0], #1e-4,
 )
 
-S = Generic(RNG_SEED=0, DT=0.2e-3, T=300e-3, EPOCHS=800)
+S = Generic(RNG_SEED=0, DT=0.2e-3, T=180e-3, EPOCHS=800)
 
 M.RAND_WEIGHT_MAX = M.W_INITIAL / (M.M * M.N_EXC)
 M.W_U_E = M.W_INITIAL / M.PROJECTION_NUM * 2
