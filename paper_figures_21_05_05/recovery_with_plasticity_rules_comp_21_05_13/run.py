@@ -452,7 +452,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] += (total_potentiation * w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)])
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] < 0] = 0
 
-                    hard_bound = m.W_INITIAL / m.PROJECTION_NUM * 10
+                    hard_bound = m.W_INITIAL / m.PROJECTION_NUM * 3
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] > hard_bound] = hard_bound 
 
                     if i_e == m.DROPOUT_ITER - 1:
