@@ -50,7 +50,7 @@ M = Generic(
     C_M_I=1e-6,
     G_L_I=.4e-3, 
     E_L_I=-.057,
-    V_TH_I=-.05,
+    V_TH_I=-.043,
     T_R_I=1e-3,
     E_R_I=-.057, # reset voltage (V)
     
