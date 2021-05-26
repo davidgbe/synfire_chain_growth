@@ -92,7 +92,7 @@ M = Generic(
 
     # Synaptic plasticity params
     TAU_STDP_PAIR=30e-3,
-    SINGLE_CELL_FR_SETPOINT_MIN=5,
+    SINGLE_CELL_FR_SETPOINT_MIN=6,
     SINGLE_CELL_FR_SYM=bool(args.fr_single_sym[0]),
     ETA=0.1,
     ALPHA=args.alpha[0], #3e-2
@@ -100,10 +100,7 @@ M = Generic(
     GAMMA=args.gamma[0], #1e-4,
 )
 
-print('here')
-print(M.SINGLE_CELL_FR_SYM)
-
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=180e-3, EPOCHS=800)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=180e-3, EPOCHS=1000)
 np.random.seed(S.RNG_SEED)
 
 M.RAND_WEIGHT_MAX = M.W_INITIAL / (M.M * M.N_EXC)
