@@ -103,7 +103,7 @@ M = Generic(
 print('here')
 print(M.SINGLE_CELL_FR_SYM)
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=180e-3, EPOCHS=800)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=180e-3, EPOCHS=1000)
 np.random.seed(S.RNG_SEED)
 
 M.RAND_WEIGHT_MAX = M.W_INITIAL / (M.M * M.N_EXC)
