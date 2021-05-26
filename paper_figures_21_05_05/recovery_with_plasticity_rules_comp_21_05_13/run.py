@@ -28,7 +28,7 @@ parser.add_argument('--title', metavar='T', type=str, nargs=1)
 parser.add_argument('--alpha', metavar='a', type=float, nargs=1)
 parser.add_argument('--beta', metavar='b', type=float, nargs=1)
 parser.add_argument('--gamma', metavar='c', type=float, nargs=1)
-parser.add_argument('--fr_single_sym', metavar='s', type=bool, nargs=1)
+parser.add_argument('--fr_single_sym', metavar='s', type=int, nargs=1)
 parser.add_argument('--rng_seed', metavar='r', type=int, nargs=1)
 
 args = parser.parse_args()
@@ -88,17 +88,20 @@ M = Generic(
 
     # Dropout params
     DROPOUT_MIN_IDX=0,
-    DROPOUT_ITER=10,
+    DROPOUT_ITER=100,
 
     # Synaptic plasticity params
     TAU_STDP_PAIR=30e-3,
     SINGLE_CELL_FR_SETPOINT_MIN=5,
-    SINGLE_CELL_FR_SYM=args.fr_single_sym[0],
+    SINGLE_CELL_FR_SYM=bool(args.fr_single_sym[0]),
     ETA=0.1,
     ALPHA=args.alpha[0], #3e-2
     BETA=args.beta[0], #1e-3,
     GAMMA=args.gamma[0], #1e-4,
 )
+
+print('here')
+print(M.SINGLE_CELL_FR_SYM)
 
 S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=180e-3, EPOCHS=800)
 np.random.seed(S.RNG_SEED)
