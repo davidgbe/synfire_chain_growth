@@ -385,7 +385,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     e_cell_fr_setpoints = np.sum(spks_for_e_cells > 0, axis=0)
                     if not m.SINGLE_CELL_FR_SYM:
                         where_fr_is_0 = (e_cell_fr_setpoints == 0)
-                        e_cell_fr_setpoints[where_fr_is_0] = np.random.normal(
+                        e_cell_fr_setpoints[where_fr_is_0] = np.random.normal   (
                             loc=m.SINGLE_CELL_FR_SETPOINT_MIN,
                             scale=m.SINGLE_CELL_FR_SETPOINT_MIN_STD,
                             size=e_cell_fr_setpoints[where_fr_is_0].shape[0]
