@@ -100,7 +100,7 @@ M = Generic(
     GAMMA=args.gamma[0], #1e-4,
 )
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=180e-3, EPOCHS=1000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=      , T=180e-3, EPOCHS=1000)
 np.random.seed(S.RNG_SEED)
 
 M.RAND_WEIGHT_MAX = M.W_INITIAL / (M.M * M.N_EXC)

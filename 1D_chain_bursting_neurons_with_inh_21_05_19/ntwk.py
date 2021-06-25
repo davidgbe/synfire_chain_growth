@@ -44,7 +44,7 @@ class LIFNtwkI(object):
             self.w_r = w_r
             self.w_u = w_u
         
-    def run(self, dt, clamp, i_ext, spks_u=None):
+    def run(self, dt, clamp, i_ext, spks_u=None, sigma_b=0):
         """
         Run simulation.
         
@@ -65,10 +65,15 @@ class LIFNtwkI(object):
         w_r = self.w_r
         w_u = self.w_u
 
-        burst = np.zeros((int(self.t_b/dt)))
-        for i in np.arange(0, self.t_b, 1./self.f_b):
-            burst[int(i/dt)] = 1   
-        l_b = len(burst)
+        burst_base = np.zeros((int(self.t_b/dt)))
+        l_b = len(burst_base)
+
+        def burst():
+            burst = copy(burst_base)
+            for i in np.arange(0, self.t_b, 1./self.f_b):
+                noise = np.random.normal(0, sigma_b)
+                burst[int(i/dt + noise)] = 1
+            return burst
         
         if spks_u is not None:
             assert len(i_ext) == len(spks_u)
@@ -122,8 +127,9 @@ class LIFNtwkI(object):
                 crossed_thresh_spiking = crossed_thresh & (~self.i_b)
 
                 spks[t_ctr, crossed_thresh_spiking.nonzero()[0]] = 1
+                b = burst()
                 for j in np.arange(l_b):
-                    spks[t_ctr + j, crossed_thresh_bursting.nonzero()[0]] = burst[j]
+                    spks[t_ctr + j, crossed_thresh_bursting.nonzero()[0]] = b[j]
                 
             # reset v and update refrac periods for nrns that spiked
             vs[t_ctr, spks[t_ctr]] = self.v_r[spks[t_ctr]]
