@@ -96,7 +96,7 @@ M = Generic(
     SINGLE_CELL_FR_SETPOINT_MIN=6,
     SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
     SINGLE_CELL_FR_SYM=bool(args.fr_single_sym[0]),
-    ETA=0.1,
+    ETA=1.,
     ALPHA_1=args.alpha_1[0], #3e-2
     ALPHA_2=args.alpha_2[0],
     BETA=args.beta[0], #1e-3,
@@ -199,6 +199,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
         scaled_down_mask = np.random.rand(m.N_EXC + m.N_SILENT, 1) < 0.5
         scaled_down_amp = np.random.rand(m.N_EXC + m.N_SILENT, 1) * 0.3
+        scaled_down_amp_e_i = np.random.rand(m.N_EXC + m.N_SILENT, 1) * 0.05
 
         w_e_e_r = np.where(scaled_down_mask, scaled_down_amp, 1) * w_e_e_r
 
@@ -207,7 +208,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
         con_per_i = m.E_I_CON_PER_LINK * m.N_EXC / m.PROJECTION_NUM
         e_i_r = rand_per_row_mat(int(con_per_i), (m.N_INH, m.N_EXC))
 
-        e_i_r = np.where(scaled_down_mask.T, scaled_down_amp.T, 1) * e_i_r
+        e_i_r = np.where(scaled_down_mask.T, scaled_down_amp_e_i.T, 1) * e_i_r
         s_e_r = rand_per_row_mat(int(0.1 * m.N_SILENT), (m.N_EXC, m.N_SILENT))
 
         # e_i_r += np.where(np.random.rand(m.N_EXC, m.N_INH) > (1. - 0.05 * 150. / m.N_INH), np.random.rand(m.N_EXC, m.N_INH), 0.)
@@ -477,7 +478,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     i_total_potentiation[:, m.DROPOUT_MAX_IDX:] = 0
 
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] += (e_total_potentiation * w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)])
-                    # w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)] += (i_total_potentiation * w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)])
+                    w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)] += (i_total_potentiation * w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)])
 
                     w_r_copy['E'][:, :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][:, :(m.N_EXC + m.N_SILENT)] < 0] = 0
 
