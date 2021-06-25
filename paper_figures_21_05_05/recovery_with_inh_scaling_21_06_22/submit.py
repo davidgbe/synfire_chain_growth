@@ -1,7 +1,7 @@
 import os
 
 base_path = os.curdir
-scripts = ['submit_all_rules.slurm', 'submit_pop.slurm', 'submit_single.slurm']
+scripts = ['submit_all_rules.slurm']
 
 for i, rng_seed in enumerate(range(2025, 2045)):
 	for src_name in scripts:
