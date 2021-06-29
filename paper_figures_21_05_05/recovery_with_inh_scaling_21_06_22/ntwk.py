@@ -253,7 +253,6 @@ class LIFNtwkG(object):
                     if self.output:
                         sio.savemat(output_dir + '/' + f'{zero_pad(i_r + 2, 6)}', {
                             'avg_input_per_cell': avg_input_per_cell,
-
                         })
             
             # update conductances
