@@ -82,14 +82,20 @@ M = Generic(
 
     # Weights
     W_E_I_R=2e-5,
+    W_E_I_R_MAX=2e-5,
     W_I_E_R=0.3e-5,
     W_A=0,
-    W_MAX=0.26 * 0.004 * 10,
-    W_INITIAL=0.26 * 0.004 * 1.6,
+    W_E_E_R=0.26 * 0.004 * 1.6,
+    W_E_E_R_MAX=0.26 * 0.004 * 4.8,
 
     # Dropout params
     DROPOUT_MIN_IDX=0,
     DROPOUT_ITER=10,
+
+    # Silent cell setup params
+    W_E_E_SCALE_DOWN_FACTOR=0.3,
+    W_E_I_SCALE_DOWN_FACTOR=0.05,
+    SCALE_DOWN_PROB=0.5,
 
     # Synaptic plasticity params
     TAU_STDP_PAIR=30e-3,
@@ -106,8 +112,7 @@ M = Generic(
 S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=180e-3, EPOCHS=2000)
 np.random.seed(S.RNG_SEED)
 
-M.RAND_WEIGHT_MAX = M.W_INITIAL / (M.M * M.N_EXC)
-M.W_U_E = M.W_INITIAL / M.PROJECTION_NUM * 2
+M.W_U_E = M.W_E_E_R / M.PROJECTION_NUM * 2
 
 M.CUT_IDX_TAU_PAIR = int(2 * M.TAU_STDP_PAIR / S.DT)
 M.KERNEL_PAIR = np.exp(-np.arange(M.CUT_IDX_TAU_PAIR) * S.DT / M.TAU_STDP_PAIR).astype(float)
@@ -145,7 +150,7 @@ def generate_exc_ff_chain(m):
         return mat_1_if_under_val(m.CON_PROB_R, (m.PROJECTION_NUM, m.PROJECTION_NUM))
 
     def ff_unit_func():
-        w = m.W_INITIAL / m.PROJECTION_NUM
+        w = m.W_E_E_R / m.PROJECTION_NUM
         return gaussian_if_under_val(m.CON_PROB_FF, (m.PROJECTION_NUM, m.PROJECTION_NUM), w, 0.5 * w)
 
     unit_funcs = [rec_unit_func, ff_unit_func]
@@ -158,7 +163,7 @@ def generate_local_con(m, ff_deg=[0, 1, 2]):
 
     unit_funcs = [unit_func] * len(ff_deg)
 
-    return m.RAND_WEIGHT_MAX * generate_ff_chain(m.N_EXC, m.PROJECTION_NUM, unit_funcs, ff_deg=ff_deg, tempering=[1.] * len(ff_deg))
+    return generate_ff_chain(m.N_EXC, m.PROJECTION_NUM, unit_funcs, ff_deg=ff_deg, tempering=[1.] * len(ff_deg))
 
 ### RUN_TEST function
 
@@ -197,9 +202,9 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
     if w_r_e is None:
         w_e_e_r = generate_exc_ff_chain(m)
 
-        scaled_down_mask = np.random.rand(m.N_EXC + m.N_SILENT, 1) < 0.5
-        scaled_down_amp = np.random.rand(m.N_EXC + m.N_SILENT, 1) * 0.3
-        scaled_down_amp_e_i = np.random.rand(m.N_EXC + m.N_SILENT, 1) * 0.05
+        scaled_down_mask = np.random.rand(m.N_EXC + m.N_SILENT, 1) < m.SCALE_DOWN_PROB
+        scaled_down_amp = np.random.rand(m.N_EXC + m.N_SILENT, 1) * m.W_E_E_SCALE_DOWN_FACTOR
+        scaled_down_amp_e_i = np.random.rand(m.N_EXC + m.N_SILENT, 1) * m.W_E_I_SCALE_DOWN_FACTOR
 
         w_e_e_r = np.where(scaled_down_mask, scaled_down_amp, 1) * w_e_e_r
 
@@ -211,10 +216,8 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
         e_i_r = np.where(scaled_down_mask.T, scaled_down_amp_e_i.T, 1) * e_i_r
         s_e_r = rand_per_row_mat(int(0.1 * m.N_SILENT), (m.N_EXC, m.N_SILENT))
 
-        # e_i_r += np.where(np.random.rand(m.N_EXC, m.N_INH) > (1. - 0.05 * 150. / m.N_INH), np.random.rand(m.N_EXC, m.N_INH), 0.)
-
         w_r_e = np.block([
-            [ w_e_e_r, s_e_r * m.W_INITIAL / m.PROJECTION_NUM, np.zeros((m.N_EXC, m.N_INH)) ],
+            [ w_e_e_r, s_e_r * m.W_E_E_R / m.PROJECTION_NUM, np.zeros((m.N_EXC, m.N_INH)) ],
             [ np.zeros((m.N_SILENT, m.N_EXC + m.N_SILENT + m.N_INH)) ],
             [ e_i_r * m.W_E_I_R,  np.zeros((m.N_INH, m.N_INH + m.N_SILENT)) ],
         ])
@@ -222,7 +225,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
     if w_r_i is None:
 
         i_e_r = mat_1_if_under_val(m.I_E_CON_PROB, (m.N_EXC, m.N_INH))
-        print(i_e_r.shape)
 
         w_r_i = np.block([
             [ np.zeros((m.N_EXC, m.N_EXC + m.N_SILENT)), i_e_r * m.W_I_E_R ],
@@ -313,7 +315,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     w_u=w_u,
                     plasticity_indices=np.arange(m.N_EXC),
                     connectivity=connectivity,
-                    W_max=m.W_MAX,
+                    W_max=m.W_E_E_R_MAX,
                     m=m.M,
                     output=False,
                     output_freq=100000,
@@ -338,11 +340,11 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 if surviving_cell_indices is not None:
                     spks_for_e_cells[:, ~(surviving_cell_indices.astype(bool))] = 0
 
-                spk_bins, freqs = bin_occurrences(spks_for_e_cells.sum(axis=0), max_val=100, bin_size=1)
+                spk_bins, freqs = bin_occurrences(spks_for_e_cells.sum(axis=0), max_val=200, bin_size=1)
                 if surviving_cell_indices is not None:
                     freqs[0] -= np.sum(np.where(~(surviving_cell_indices.astype(bool)), 1, 0))
 
-                axs[1].bar(spk_bins, freqs)
+                axs[1].bar(spk_bins, freqs, alpha=0.5)
                 axs[1].set_xlabel('Spks per neuron')
                 axs[1].set_ylabel('Frequency')
                 axs[1].set_xlim(-0.5, 20.5)
@@ -350,6 +352,11 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
                 raster = np.stack([rsp.spks_t, rsp.spks_c])
                 inh_raster = raster[:, raster[1, :] > (m.N_EXC + m.N_SILENT)]
+
+                spk_bins_i, freqs_i = bin_occurrences(spks_for_i_cells.sum(axis=0), max_val=100, bin_size=1)
+
+                axs[1].bar(spk_bins_i, freqs_i, color='black', alpha=0.5)
+
 
                 if active_cells_pre_dropout_mask is not None:
                     exc_cells_initially_active = copy(spks_for_e_cells)
@@ -391,10 +398,17 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         'inh_raster': inh_raster,
                     })
 
+                    where_fr_is_0 = (np.sum(spks_for_e_cells > 0, axis=0) == 0)
+                    w_e_i = w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)]
+                    scale_down_correction_mask = np.any(w_e_i >= m.W_E_I_R, axis=0) & where_fr_is_0
+                    n_nonzero = scale_down_correction_mask.sum()
+                    w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)][:, scale_down_correction_mask] = np.random.rand(m.N_INH, n_nonzero) * m.W_E_I_R * m.W_E_I_SCALE_DOWN_FACTOR
+                
+                elif i_e == 1:
                     e_cell_fr_setpoints = np.sum(spks_for_e_cells > 0, axis=0)
                     i_cell_fr_setpoints = np.sum(spks_for_i_cells > 0, axis=0)
+                    where_fr_is_0 = (e_cell_fr_setpoints == 0)
                     if not m.SINGLE_CELL_FR_SYM:
-                        where_fr_is_0 = (e_cell_fr_setpoints == 0)
                         e_cell_fr_setpoints[where_fr_is_0] = np.random.normal   (
                             loc=m.SINGLE_CELL_FR_SETPOINT_MIN,
                             scale=m.SINGLE_CELL_FR_SETPOINT_MIN_STD,
@@ -462,7 +476,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
                     if i_cell_fr_setpoints is not None:
                         i_diffs = i_cell_fr_setpoints - np.sum(spks_for_i_cells > 0, axis=0)
-                        i_diffs[(i_diffs <= 1) & (i_diffs >= -1)] = 0
                         fr_update_i = i_diffs.reshape(i_diffs.shape[0], 1) * np.ones((m.N_INH, m.N_EXC + m.N_SILENT)).astype(float)
                     else:
                         fr_update_i = 0
@@ -482,8 +495,11 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
                     w_r_copy['E'][:, :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][:, :(m.N_EXC + m.N_SILENT)] < 0] = 0
 
-                    hard_bound = m.W_INITIAL / m.PROJECTION_NUM * 3
-                    w_r_copy['E'][:, :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][:, :(m.N_EXC + m.N_SILENT)] > hard_bound] = hard_bound 
+                    w_e_e_hard_bound = m.W_E_E_R_MAX / m.PROJECTION_NUM
+                    w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] > w_e_e_hard_bound] = w_e_e_hard_bound 
+
+                    w_e_i_hard_bound = m.W_E_I_R_MAX
+                    w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)] > m.W_E_I_R_MAX] = m.W_E_I_R_MAX 
 
                     if i_e == m.DROPOUT_ITER - 1:
                         active_cells_pre_dropout_mask = np.where(spks_for_e_cells.sum(axis=0) > 0, True, False)
@@ -540,7 +556,7 @@ def clip(f, n=1):
     f_str = f_str[:(f_str.find('.') + 1 + n)]
     return f_str
 
-title = f'{args.title[0]}_ff_{clip(M.W_INITIAL / (0.26 * 0.004))}_pf_{clip(M.CON_PROB_FF, 2)}_pr_{clip(M.CON_PROB_R, 2)}_eir_{clip(M.W_E_I_R * 1e5)}_ier_{clip(M.W_I_E_R * 1e5)}'
+title = f'{args.title[0]}_ff_{clip(M.W_E_E_R / (0.26 * 0.004))}_pf_{clip(M.CON_PROB_FF, 2)}_pr_{clip(M.CON_PROB_R, 2)}_eir_{clip(M.W_E_I_R * 1e5)}_ier_{clip(M.W_I_E_R * 1e5)}'
 
 for i in range(1):
     all_rsps = quick_plot(M, run_title=title, dropouts=[

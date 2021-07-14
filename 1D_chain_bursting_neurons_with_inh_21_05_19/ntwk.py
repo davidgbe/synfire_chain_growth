@@ -9,12 +9,15 @@ from aux import Generic, c_tile, r_tile
 
 cc = np.concatenate
 
+def alpha_func(tidx, dt, tau):
+    t = tidx * dt
+    return np.e / tau * t * np.exp(-t / tau)
 
 # Current-based LIF network
 class LIFNtwkI(object):
     """Network of leaky integrate-and-fire neurons with *current-based* synapses."""
     
-    def __init__(self, c_m, g_l, e_l, v_th, v_r, t_r, w_r, w_u, i_b, f_b, t_b, sparse=False):
+    def __init__(self, c_m, g_l, e_l, v_th, v_r, t_r, w_r, w_u, i_b, f_b, t_b, t_a, sparse=False):
         # ntwk size
         n = w_r.shape[0]
         
@@ -36,6 +39,7 @@ class LIFNtwkI(object):
         self.i_b = i_b # indices with bursting cells
         self.f_b = f_b # burst frequency
         self.t_b = t_b
+        self.t_a = t_a # alpha function timescale
 
         if sparse:  # sparsify connectivity if desired
             self.w_r = csc_matrix(w_r)
@@ -64,6 +68,9 @@ class LIFNtwkI(object):
         t_r_int = np.round(t_r/dt).astype(int)
         w_r = self.w_r
         w_u = self.w_u
+        t_a_int = np.round(self.t_a/dt).astype(int)
+
+        i_kernel = alpha_func(np.flip(np.arange(0, 10 * t_a_int)), dt, self.t_a)
 
         burst_base = np.zeros((int(self.t_b/dt)))
         l_b = len(burst_base)
@@ -103,12 +110,23 @@ class LIFNtwkI(object):
                 
                 # get total current input
                 i_total = -g_l*(v - e_l)  # leak
+
+                t_start = t_ctr - 10 * t_a_int
+                if t_start < 0:
+                    t_start = 0
+
+                len_spk_hist = t_ctr - t_start
+
+                trimmed_i_kernel = i_kernel[(-len_spk_hist):]
                 
-                if t_ctr >= 1:  # synaptic
+                if trimmed_i_kernel.shape[0] >= 1:  # synaptic
                     
                     if spks_u is not None:  # upstream
-                        i_total += w_u.dot(spks_u[t_ctr-1, :])
-                    i_total += w_r.dot(spks[t_ctr-1, :])  # recurrent
+                        input_current = trimmed_i_kernel.dot(spks_u[t_start:t_ctr, :])
+                        i_total += w_u.dot(input_current)
+
+                    rec_current = trimmed_i_kernel.dot(spks[t_start:t_ctr, :])
+                    i_total += w_r.dot(rec_current)  # recurrent
                 
                 i_total += i_ext[t_ctr]  # external
                 
