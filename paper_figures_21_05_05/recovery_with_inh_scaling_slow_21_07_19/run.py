@@ -109,7 +109,7 @@ M = Generic(
     GAMMA=args.gamma[0], #1e-4,
 )
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=180e-3, EPOCHS=2000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=180e-3, EPOCHS=3000)
 np.random.seed(S.RNG_SEED)
 
 M.W_U_E = M.W_E_E_R / M.PROJECTION_NUM * 2
