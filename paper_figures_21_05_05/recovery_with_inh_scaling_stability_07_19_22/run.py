@@ -90,7 +90,10 @@ M = Generic(
 
     # Dropout params
     DROPOUT_MIN_IDX=0,
-    DROPOUT_ITER=10,
+    DROPOUT_ITER=4000,
+
+    I_SINGLE_FR_ITER=4000,
+    POP_FR_ITER=4000,
 
     # Silent cell setup params
     W_E_E_SCALE_DOWN_FACTOR=0.3,
@@ -406,7 +409,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 
                 elif i_e == 1:
                     e_cell_fr_setpoints = np.sum(spks_for_e_cells > 0, axis=0)
-                    i_cell_fr_setpoints = np.sum(spks_for_i_cells > 0, axis=0)
                     where_fr_is_0 = (e_cell_fr_setpoints == 0)
                     if not m.SINGLE_CELL_FR_SYM:
                         e_cell_fr_setpoints[where_fr_is_0] = np.random.normal   (
@@ -456,7 +458,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                             stdp_burst_pair += 0.
 
                     # put in population level rule
-                    if i_e == 5:
+                    if i_e == m.POP_FR_ITER:
                         e_cell_pop_fr_setpoint = np.sum(spks_for_e_cells)
                     if e_cell_pop_fr_setpoint is not None:
                         fr_pop_update = e_cell_pop_fr_setpoint - np.sum(spks_for_e_cells)
@@ -474,6 +476,10 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     else:
                         fr_update_e = 0
 
+                    # individual firing rate update for i cells
+                    if i_e == m.I_SINGLE_FR_ITER:
+                        i_cell_fr_setpoints = np.sum(spks_for_i_cells > 0, axis=0)
+
                     if i_cell_fr_setpoints is not None:
                         i_diffs = i_cell_fr_setpoints - np.sum(spks_for_i_cells > 0, axis=0)
                         fr_update_i = i_diffs.reshape(i_diffs.shape[0], 1) * np.ones((m.N_INH, m.N_EXC + m.N_SILENT)).astype(float)
@@ -487,8 +493,12 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     e_total_potentiation[m.DROPOUT_MAX_IDX:, :] = 0
                     e_total_potentiation[:, :m.DROPOUT_MIN_IDX] = 0
                     e_total_potentiation[:, m.DROPOUT_MAX_IDX:] = 0
-                    i_total_potentiation[:, :m.DROPOUT_MIN_IDX] = 0
-                    i_total_potentiation[:, m.DROPOUT_MAX_IDX:] = 0
+                    if type(i_total_potentiation) is not float:
+                        try:
+                            i_total_potentiation[:, :m.DROPOUT_MIN_IDX] = 0
+                            i_total_potentiation[:, m.DROPOUT_MAX_IDX:] = 0
+                        except TypeError as e:
+                            breakpoint()
 
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] += (e_total_potentiation * w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)])
                     w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)] += (i_total_potentiation * w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)])
@@ -516,17 +526,32 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                                 'inh_raster': inh_raster,
                             })
                         else:
-                            sio.savemat(robustness_output_dir + '/' + f'title_{title}_dropout_{d_idx}_eidx_{zero_pad(i_e, 4)}', {
-                                'first_spk_times': first_spk_times,
-                                'w_r_e_summed': np.sum(rsp.ntwk.w_r['E'][:m.N_EXC, :m.N_EXC], axis=1),
-                                'w_r_e_i_summed': np.sum(rsp.ntwk.w_r['E'][m.N_EXC:, :m.N_EXC], axis=1),
-                                'spk_bins': spk_bins,
-                                'freqs': freqs,
-                                'exc_cells_initially_active': exc_cells_initially_active,
-                                'exc_cells_newly_active': exc_cells_newly_active,
-                                'inh_raster': inh_raster,
-                                'surviving_cell_indices': surviving_cell_indices,
-                            })
+                            if i_e % 250 == 0:
+                                sio.savemat(robustness_output_dir + '/' + f'title_{title}_dropout_{d_idx}_eidx_{zero_pad(i_e, 4)}', {
+                                    'first_spk_times': first_spk_times,
+                                    'w_r_e_summed': np.sum(rsp.ntwk.w_r['E'][:m.N_EXC, :m.N_EXC], axis=1),
+                                    'w_r_e_i_summed': np.sum(rsp.ntwk.w_r['E'][m.N_EXC:, :m.N_EXC], axis=1),
+                                    'w_r_e': rsp.ntwk.w_r['E'],
+                                    'w_r_i': rsp.ntwk.w_r['I'],
+                                    'spk_bins': spk_bins,
+                                    'freqs': freqs,
+                                    'exc_cells_initially_active': exc_cells_initially_active,
+                                    'exc_cells_newly_active': exc_cells_newly_active,
+                                    'inh_raster': inh_raster,
+                                    'surviving_cell_indices': surviving_cell_indices,
+                                })                               
+                            else:
+                                sio.savemat(robustness_output_dir + '/' + f'title_{title}_dropout_{d_idx}_eidx_{zero_pad(i_e, 4)}', {
+                                    'first_spk_times': first_spk_times,
+                                    'w_r_e_summed': np.sum(rsp.ntwk.w_r['E'][:m.N_EXC, :m.N_EXC], axis=1),
+                                    'w_r_e_i_summed': np.sum(rsp.ntwk.w_r['E'][m.N_EXC:, :m.N_EXC], axis=1),
+                                    'spk_bins': spk_bins,
+                                    'freqs': freqs,
+                                    'exc_cells_initially_active': exc_cells_initially_active,
+                                    'exc_cells_newly_active': exc_cells_newly_active,
+                                    'inh_raster': inh_raster,
+                                    'surviving_cell_indices': surviving_cell_indices,
+                                })
 
 
 def quick_plot(m, run_title='', w_r_e=None, w_r_i=None, repeats=1, show_connectivity=True, n_show_only=None, add_noise=True, dropouts=[{'E': 0, 'I': 0}]):
