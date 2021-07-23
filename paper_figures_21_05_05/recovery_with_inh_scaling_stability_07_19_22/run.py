@@ -102,14 +102,14 @@ M = Generic(
     SINGLE_CELL_FR_SETPOINT_MIN=6,
     SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
     SINGLE_CELL_FR_SYM=bool(args.fr_single_sym[0]),
-    ETA=1.,
+    ETA=2.,
     ALPHA_1=args.alpha_1[0], #3e-2
     ALPHA_2=args.alpha_2[0],
     BETA=args.beta[0], #1e-3,
     GAMMA=args.gamma[0], #1e-4,
 )
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=180e-3, EPOCHS=2000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=180e-3, EPOCHS=3000)
 np.random.seed(S.RNG_SEED)
 
 M.W_U_E = M.W_E_E_R / M.PROJECTION_NUM * 2
