@@ -92,8 +92,9 @@ M = Generic(
     DROPOUT_MIN_IDX=0,
     DROPOUT_ITER=4000,
 
-    I_SINGLE_FR_ITER=150,
-    POP_FR_ITER=1000,
+    E_SINGLE_FR_TRIALS=(1, 11),
+    I_SINGLE_FR_TRIALS=(11, 21),
+    POP_FR_TRIALS=(21, 31),
 
     # Silent cell setup params
     W_E_E_SCALE_DOWN_FACTOR=0.3,
@@ -400,22 +401,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         'exc_raster': exc_raster,
                         'inh_raster': inh_raster,
                     })
-
-                    where_fr_is_0 = (np.sum(spks_for_e_cells > 0, axis=0) == 0)
-                    w_e_i = w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)]
-                    scale_down_correction_mask = np.any(w_e_i >= m.W_E_I_R, axis=0) & where_fr_is_0
-                    n_nonzero = scale_down_correction_mask.sum()
-                    w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)][:, scale_down_correction_mask] = np.random.rand(m.N_INH, n_nonzero) * m.W_E_I_R * m.W_E_I_SCALE_DOWN_FACTOR
-                
-                elif i_e == 1:
-                    e_cell_fr_setpoints = np.sum(spks_for_e_cells > 0, axis=0)
-                    where_fr_is_0 = (e_cell_fr_setpoints == 0)
-                    if not m.SINGLE_CELL_FR_SYM:
-                        e_cell_fr_setpoints[where_fr_is_0] = np.random.normal   (
-                            loc=m.SINGLE_CELL_FR_SETPOINT_MIN,
-                            scale=m.SINGLE_CELL_FR_SETPOINT_MIN_STD,
-                            size=e_cell_fr_setpoints[where_fr_is_0].shape[0]
-                        )
                 else:
                     if i_e >= m.DROPOUT_ITER:
                         spks_for_e_cells[:, ~surviving_cell_indices.astype(int)] = 0
@@ -437,7 +422,9 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
                             filtered_spks_for_e_cells[i_t, i_c] = burst_kernel(spks_for_e_cells[idx_filter_start: idx_filter_end, i_c])
 
-                    # put in pairwise STDP on filtered_spks_for_e_cells
+
+
+                    # STDP FOR E CELLS: put in pairwise STDP on filtered_spks_for_e_cells
                     stdp_burst_pair = 0
 
                     for i_t in range(spks_for_e_cells.shape[0]):
@@ -457,34 +444,68 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         else:
                             stdp_burst_pair += 0.
 
-                    # put in population level rule
-                    if i_e == m.POP_FR_ITER:
-                        e_cell_pop_fr_setpoint = np.sum(spks_for_e_cells)
-                    if e_cell_pop_fr_setpoint is not None:
-                        fr_pop_update = e_cell_pop_fr_setpoint - np.sum(spks_for_e_cells)
-                    else:
-                        fr_pop_update = 0
 
-                    # individual firing rate update
-                    if e_cell_fr_setpoints is not None:
+
+                    # E SINGLE-CELL FIRING RATE RULE
+                    fr_update_e = 0
+
+                    if i_e >= m.E_SINGLE_FR_TRIALS[0] and i_e < m.E_SINGLE_FR_TRIALS[1]:
+                        if e_cell_fr_setpoints is None:
+                            e_cell_fr_setpoints = np.sum(spks_for_e_cells > 0, axis=0)
+                        else:
+                            e_cell_fr_setpoints += np.sum(spks_for_e_cells > 0, axis=0)
+                    elif i_e == m.E_SINGLE_FR_TRIALS[1]:
+                        e_cell_fr_setpoints = e_cell_fr_setpoints / (m.E_SINGLE_FR_TRIALS[1] - m.E_SINGLE_FR_TRIALS[0])
+                        where_fr_is_0 = (e_cell_fr_setpoints == 0)
+                        if not m.SINGLE_CELL_FR_SYM:
+                            e_cell_fr_setpoints[where_fr_is_0] = np.random.normal   (
+                                loc=m.SINGLE_CELL_FR_SETPOINT_MIN,
+                                scale=m.SINGLE_CELL_FR_SETPOINT_MIN_STD,
+                                size=e_cell_fr_setpoints[where_fr_is_0].shape[0]
+                            )
+                    elif i_e > m.E_SINGLE_FR_TRIALS[1]:
                         e_diffs = e_cell_fr_setpoints - np.sum(spks_for_e_cells > 0, axis=0)
                         if m.SINGLE_CELL_FR_SYM:
                             e_diffs[(e_diffs <= 1) & (e_diffs >= -1)] = 0
                         else:
                             e_diffs[e_diffs >= -1] = 0
                         fr_update_e = e_diffs.reshape(e_diffs.shape[0], 1) * np.ones((m.N_EXC + m.N_SILENT, m.N_EXC + m.N_SILENT)).astype(float)
-                    else:
-                        fr_update_e = 0
 
-                    # individual firing rate update for i cells
-                    if i_e == m.I_SINGLE_FR_ITER:
-                        i_cell_fr_setpoints = np.sum(spks_for_i_cells > 0, axis=0)
 
-                    if i_cell_fr_setpoints is not None:
+
+                    # E POPULATION-LEVEL FIRING RATE RULE
+                    fr_pop_update = 0
+
+                    if i_e >= m.POP_FR_TRIALS[0] and i_e < m.POP_FR_TRIALS[1]:
+                        if e_cell_pop_fr_setpoint is None:
+                            e_cell_pop_fr_setpoint = np.sum(spks_for_e_cells)
+                        else:
+                            e_cell_pop_fr_setpoint += np.sum(spks_for_e_cells)
+                    elif i_e == m.POP_FR_TRIALS[1]:
+                        e_cell_pop_fr_setpoint = e_cell_pop_fr_setpoint / (m.POP_FR_TRIALS[1] - m.POP_FR_TRIALS[0])
+                    elif i_e > m.POP_FR_TRIALS[1]:
+                        fr_pop_update = e_cell_pop_fr_setpoint - np.sum(spks_for_e_cells)
+
+
+
+                    # I SINGLE-CELL FIRING RATE RULE
+                    fr_update_i = 0
+
+                    if i_e >= m.I_SINGLE_FR_TRIALS[0] and i_e < m.I_SINGLE_FR_TRIALS[1]:
+                        if i_cell_fr_setpoints is None:
+                            i_cell_fr_setpoints = np.sum(spks_for_i_cells > 0, axis=0)
+                        else:
+                            i_cell_fr_setpoints += np.sum(spks_for_i_cells > 0, axis=0)
+                    elif i_e == m.I_SINGLE_FR_TRIALS[1]:
+                        i_cell_fr_setpoints = i_cell_fr_setpoints / (m.I_SINGLE_FR_TRIALS[1] - m.I_SINGLE_FR_TRIALS[0])
+                    elif i_e > m.I_SINGLE_FR_TRIALS[1]:
                         i_diffs = i_cell_fr_setpoints - np.sum(spks_for_i_cells > 0, axis=0)
+                        i_diffs[(i_diffs <= 1) & (i_diffs >= -1)] = 0
                         fr_update_i = i_diffs.reshape(i_diffs.shape[0], 1) * np.ones((m.N_INH, m.N_EXC + m.N_SILENT)).astype(float)
-                    else:
-                        fr_update_i = 0
+
+                    print('fr_update_e', fr_update_e)
+                    print('fr_pop_update', fr_pop_update)
+                    print('fr_update_i', fr_update_i)
 
                     e_total_potentiation = m.ETA * (m.ALPHA_1 * fr_update_e + m.BETA * stdp_burst_pair + m.GAMMA * fr_pop_update)
                     i_total_potentiation = m.ETA * (m.ALPHA_2 * fr_update_i)
@@ -503,13 +524,14 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] += (e_total_potentiation * w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)])
                     w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)] += (i_total_potentiation * w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)])
 
-                    w_r_copy['E'][:, :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][:, :(m.N_EXC + m.N_SILENT)] < 0] = 0
+                    w_r_copy['E'][w_r_copy['E'] < 0] = 0
 
                     w_e_e_hard_bound = m.W_E_E_R_MAX / m.PROJECTION_NUM
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] > w_e_e_hard_bound] = w_e_e_hard_bound 
 
                     w_e_i_hard_bound = m.W_E_I_R_MAX
                     w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)] > m.W_E_I_R_MAX] = m.W_E_I_R_MAX 
+
 
                     if i_e == m.DROPOUT_ITER - 1:
                         active_cells_pre_dropout_mask = np.where(spks_for_e_cells.sum(axis=0) > 0, True, False)
