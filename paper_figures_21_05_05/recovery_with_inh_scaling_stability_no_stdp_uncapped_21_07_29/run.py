@@ -58,9 +58,9 @@ M = Generic(
     # syn rev potentials and decay times
     E_E=0, E_I=-.09, E_A=-.07, T_E=.004, T_I=.004, T_A=.006,
     
-    N_EXC=300,
+    N_EXC=900,
     N_SILENT=0,
-    N_INH=150,
+    N_INH=450,
     M=20,
     
     # Input params
@@ -106,7 +106,7 @@ M = Generic(
     SINGLE_CELL_FR_SETPOINT_MIN=6,
     SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
     SINGLE_CELL_FR_SYM=bool(args.fr_single_sym[0]),
-    ETA=2.,
+    ETA=1.,
     ALPHA_1=args.alpha_1[0], #3e-2
     ALPHA_2=args.alpha_2[0],
     BETA=args.beta[0], #1e-3,
