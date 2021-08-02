@@ -19,7 +19,7 @@ module load contrib/python_3.8/3.8
 ## Commands to run
 cd //gscratch/stf/davidgbe/compneuro
 source davidgbe-env/bin/activate
-cd synfire_chain_growth/paper_figures_21_05_05/recovery_with_inh_scaling_stdp_settle_21_07_31
+cd synfire_chain_growth/paper_figures_21_05_05/recovery_with_inh_scaling_stdp_settle_21_08_01
 python run.py --title settle --alpha_1 3e-2 --alpha_2 1.5e-2 --beta 1e-3 --gamma 1e-4 --fr_single_sym 0 --rng_seed SEED
 deactivate
 
