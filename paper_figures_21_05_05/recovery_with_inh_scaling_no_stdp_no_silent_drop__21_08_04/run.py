@@ -628,5 +628,5 @@ for i in range(1):
     print(w_r_e, w_r_i)
 
     all_rsps = quick_plot(M, run_title=title, w_r_e=w_r_e, w_r_i=w_r_i, dropouts=[
-        {'E': 0.0, 'I': 0},
+        {'E': 0.5, 'I': 0},
     ])

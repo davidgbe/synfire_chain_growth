@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## Presets
-#SBATCH --job-name=all_rules
+#SBATCH --job-name=no_silent_drop
 
 #SBATCH -p stf
 #SBATCH -A stf
