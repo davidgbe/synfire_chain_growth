@@ -3,7 +3,7 @@ import os
 base_path = os.curdir
 scripts = ['submit_all_rules.slurm']
 
-for i, rng_seed in enumerate(range(2025, 2035)):
+for i, rng_seed in enumerate(range(2025, 2030)):
 	for src_name in scripts:
 		name_parts = src_name.split('.')
 		dst_name = name_parts[0] + '_' + str(i) + '.' + name_parts[1]
