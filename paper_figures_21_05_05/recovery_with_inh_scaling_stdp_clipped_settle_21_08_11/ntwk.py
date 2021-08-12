@@ -308,6 +308,10 @@ class LIFNtwkG(object):
             rp_ctr[spks[t_ctr, :]] = t_r_int[spks[t_ctr, :]] + 1
             
             # decrement refrac periods
+            inactive_steps = int(10e-3 / dt)
+            inactive = np.where(np.random.rand(spks[t_ctr, :].shape[0]) < 0.03 / inactive_steps, 1, 0).astype(int)
+
+            rp_ctr += (inactive * inactive_steps)
             rp_ctr[rp_ctr > 0] -= 1
             
         t = dt*np.arange(n_t, dtype=float)

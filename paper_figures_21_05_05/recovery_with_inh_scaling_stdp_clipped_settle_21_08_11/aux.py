@@ -87,7 +87,7 @@ def dropout_on_mat(mat, percent, min_idx=0, max_idx=None):
 
 def report_mat(mat):
     if type(mat) is np.ndarray:
-        nonzero_vals = mat[mat != 0]
+        nonzero_vals = (mat[mat != 0.])
         print(nonzero_vals)
         n_all_vals = reduce(lambda a,b: a*b, mat.shape)
         print(f'{n_all_vals - len(nonzero_vals)} zero entries, {len(nonzero_vals)} nonzero vals, mean val: {nonzero_vals.mean()}')

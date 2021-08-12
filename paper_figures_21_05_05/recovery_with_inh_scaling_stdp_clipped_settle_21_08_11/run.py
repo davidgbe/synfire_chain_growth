@@ -86,7 +86,7 @@ M = Generic(
     W_E_I_R_MAX=2.5e-5,
     W_I_E_R=0.3e-5,
     W_A=0,
-    W_E_E_R=0.26 * 0.004 * 1.6,
+    W_E_E_R=0.26 * 0.004 * 1.3,
     W_E_E_R_MAX=0.26 * 0.004 * 4.8,
 
     # Dropout params
@@ -467,7 +467,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     elif i_e > m.E_SINGLE_FR_TRIALS[1]:
                         e_diffs = e_cell_fr_setpoints - np.sum(spks_for_e_cells > 0, axis=0)
                         if m.SINGLE_CELL_FR_SYM:
-                            e_diffs[(e_diffs <= 1) & (e_diffs >= -1)] = 0
+                            print('happens')
                         else:
                             e_diffs[e_diffs >= -1] = 0
                         fr_update_e = e_diffs.reshape(e_diffs.shape[0], 1) * np.ones((m.N_EXC + m.N_SILENT, m.N_EXC + m.N_SILENT)).astype(float)
@@ -504,11 +504,11 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         i_diffs[(i_diffs <= 1) & (i_diffs >= -1)] = 0
                         fr_update_i = i_diffs.reshape(i_diffs.shape[0], 1) * np.ones((m.N_INH, m.N_EXC + m.N_SILENT)).astype(float)
 
-                    print('stdp_burst_pair')
-                    report_mat(stdp_burst_pair)
+                    # print('stdp_burst_pair')
+                    # report_mat(stdp_burst_pair)
 
-                    print('fr_update_e')
-                    report_mat(fr_update_e)
+                    # print('fr_update_e')
+                    # report_mat(fr_update_e)
 
                     print('fr_pop_update')
                     report_mat(fr_pop_update)
@@ -531,9 +531,12 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                             breakpoint()
 
                     print('delta_e_fr')
-                    report_mat(m.ETA * m.ALPHA_1 * fr_update_e * w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)])
+                    mat_delta_e_fr = fr_update_e * w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)]
+                    report_mat(m.ALPHA_1 * mat_delta_e_fr)
                     print('delta_e_stdp')
-                    report_mat(m.ETA  * m.BETA * stdp_burst_pair * w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)])
+                    mat_delta_e_stdp = stdp_burst_pair * w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)]
+                    report_mat(m.BETA * mat_delta_e_stdp)
+
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] += (e_total_potentiation * w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)])
                     w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)] += (i_total_potentiation * w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)])
 
