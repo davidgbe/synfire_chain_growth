@@ -448,11 +448,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                             )
                     elif i_e > m.E_SINGLE_FR_TRIALS[1]:
                         e_diffs = e_cell_fr_setpoints - np.sum(spks_for_e_cells > 0, axis=0)
-                        if m.SINGLE_CELL_FR_SYM:
-                            print('happens')
-                        else:
-                            e_diffs[e_diffs >= 0] = 0
-                        fr_update_e = e_diffs.reshape(e_diffs.shape[0], 1) * np.ones((m.N_EXC + m.N_SILENT, m.N_EXC + m.N_SILENT)).astype(float)
 
                         # STDP FOR E CELLS: put in pairwise STDP on filtered_spks_for_e_cells
                         for i_t in range(spks_for_e_cells.shape[0]):
@@ -473,6 +468,10 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                                 stdp_burst_pair += 0.
 
                         stdp_burst_pair[e_diffs == 0, :] = 0
+
+                        if not m.SINGLE_CELL_FR_SYM:
+                            e_diffs[e_diffs >= 0] = 0
+                        fr_update_e = e_diffs.reshape(e_diffs.shape[0], 1) * np.ones((m.N_EXC + m.N_SILENT, m.N_EXC + m.N_SILENT)).astype(float)
 
 
 
