@@ -104,7 +104,7 @@ M = Generic(
 
     # Synaptic plasticity params
     TAU_STDP_PAIR=30e-3,
-    STDP_MIN_LAG=0,
+    STDP_MIN_LAG=3e-3,
     SINGLE_CELL_FR_SETPOINT_MIN=6,
     SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
     SINGLE_CELL_FR_SYM=bool(args.fr_single_sym[0]),
