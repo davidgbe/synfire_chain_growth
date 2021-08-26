@@ -83,7 +83,7 @@ M = Generic(
 
     # Weights
     W_E_I_R=2e-5,
-    W_E_I_R_MAX=2.5e-5,
+    W_E_I_R_MAX=20e-5,
     W_I_E_R=0.3e-5,
     W_A=0,
     W_E_E_R=0.26 * 0.004 * 1.6,

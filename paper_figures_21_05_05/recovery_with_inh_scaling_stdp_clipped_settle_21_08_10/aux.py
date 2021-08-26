@@ -40,6 +40,9 @@ def bin_occurrences(occurrences, min_val=0, max_val=None, bin_size=1):
     if max_val is None:
         max_val = occurrences.max()
 
+    if min_val is None:
+        min_val = occurrences.min()
+
     max_idx = int(np.ceil((max_val - min_val) / bin_size)) + 1
 
     binned = np.zeros(max_idx, dtype=int)
@@ -47,7 +50,7 @@ def bin_occurrences(occurrences, min_val=0, max_val=None, bin_size=1):
         if n >= max_idx or n < 0:
             raise IndexError(f'val {occurrences[i]} is out of bounds for min {min_val} and max {max_val}')
         binned[n] += 1
-    return np.arange(max_idx) * bin_size, binned
+    return np.arange(max_idx) * bin_size + min_val, binned
 
 
 def calc_degree_dist(mat):

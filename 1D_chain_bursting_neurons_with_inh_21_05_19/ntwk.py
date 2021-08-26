@@ -138,16 +138,22 @@ class LIFNtwkI(object):
             
             # update spks
             if t_ctr in clamp.spk:  # check for clamped spikes
-                spks[t_ctr, :] = clamp.spk[t_ctr]
-            else:  # check for threshold crossings
-                crossed_thresh = vs[t_ctr, :] >= self.v_th
-                crossed_thresh_bursting = crossed_thresh & self.i_b
-                crossed_thresh_spiking = crossed_thresh & (~self.i_b)
+                clamped = clamp.spk[t_ctr]
+                spks[t_ctr, clamped] = 1
+                unclamped = np.ones(n, dtype=bool)
+                unclamped[clamped] = 0
+            else:
+                unclamped = np.ones(n, dtype=bool)
 
-                spks[t_ctr, crossed_thresh_spiking.nonzero()[0]] = 1
-                b = burst()
-                for j in np.arange(l_b):
-                    spks[t_ctr + j, crossed_thresh_bursting.nonzero()[0]] = b[j]
+
+            crossed_thresh = vs[t_ctr, unclamped] >= self.v_th
+            crossed_thresh_bursting = crossed_thresh & self.i_b[unclamped]
+            crossed_thresh_spiking = crossed_thresh & (~(self.i_b[unclamped]))
+
+            spks[t_ctr, crossed_thresh_spiking.nonzero()[0]] = 1
+            b = burst()
+            for j in np.arange(l_b):
+                spks[t_ctr + j, crossed_thresh_bursting.nonzero()[0]] = b[j]
                 
             # reset v and update refrac periods for nrns that spiked
             vs[t_ctr, spks[t_ctr]] = self.v_r[spks[t_ctr]]

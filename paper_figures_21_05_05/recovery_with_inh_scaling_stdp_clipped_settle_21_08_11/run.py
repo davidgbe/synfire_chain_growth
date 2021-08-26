@@ -403,6 +403,9 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         'freqs': freqs,
                         'exc_raster': exc_raster,
                         'inh_raster': inh_raster,
+                        'w_r_e': rsp.ntwk.w_r['E'],
+                        'w_r_i': rsp.ntwk.w_r['I'],
+
                     })
                 else:
                     if i_e >= m.DROPOUT_ITER:

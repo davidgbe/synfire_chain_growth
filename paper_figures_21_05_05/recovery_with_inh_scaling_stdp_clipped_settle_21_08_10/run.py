@@ -209,18 +209,18 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
     if w_r_e is None:
         w_e_e_r = generate_exc_ff_chain(m)
 
-        scaled_down_mask = np.random.rand(m.N_EXC + m.N_SILENT, 1) < m.SCALE_DOWN_PROB
-        scaled_down_amp = np.random.rand(m.N_EXC + m.N_SILENT, 1) * m.W_E_E_SCALE_DOWN_FACTOR
-        scaled_down_amp_e_i = np.random.rand(m.N_EXC + m.N_SILENT, 1) * m.W_E_I_SCALE_DOWN_FACTOR
+        # scaled_down_mask = np.random.rand(m.N_EXC + m.N_SILENT, 1) < m.SCALE_DOWN_PROB
+        # scaled_down_amp = np.random.rand(m.N_EXC + m.N_SILENT, 1) * m.W_E_E_SCALE_DOWN_FACTOR
+        # scaled_down_amp_e_i = np.random.rand(m.N_EXC + m.N_SILENT, 1) * m.W_E_I_SCALE_DOWN_FACTOR
 
-        w_e_e_r = np.where(scaled_down_mask, scaled_down_amp, 1) * w_e_e_r
+        # w_e_e_r = np.where(scaled_down_mask, scaled_down_amp, 1) * w_e_e_r
 
         np.fill_diagonal(w_e_e_r, 0.)
 
         con_per_i = m.E_I_CON_PER_LINK * m.N_EXC / m.PROJECTION_NUM
         e_i_r = rand_per_row_mat(int(con_per_i), (m.N_INH, m.N_EXC))
 
-        e_i_r = np.where(scaled_down_mask.T, scaled_down_amp_e_i.T, 1) * e_i_r
+        # e_i_r = np.where(scaled_down_mask.T, scaled_down_amp_e_i.T, 1) * e_i_r
         s_e_r = rand_per_row_mat(int(0.1 * m.N_SILENT), (m.N_EXC, m.N_SILENT))
 
         w_r_e = np.block([
@@ -395,6 +395,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 first_spk_times = process_single_activation(exc_raster, m)
 
                 if i_e == 0:
+                    print(len(rsp.ntwk.w_r['E'][:900, :900].nonzero()[1]))
                     sio.savemat(robustness_output_dir + '/' + f'title_{title}_dropout_{d_idx}_eidx_{zero_pad(i_e, 4)}', {
                         'first_spk_times': first_spk_times,
                         'w_r_e_summed': np.sum(rsp.ntwk.w_r['E'][:m.N_EXC, :m.N_EXC], axis=1),
@@ -403,6 +404,8 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         'freqs': freqs,
                         'exc_raster': exc_raster,
                         'inh_raster': inh_raster,
+                        'w_r_e': rsp.ntwk.w_r['E'],
+                        'w_r_i': rsp.ntwk.w_r['I'],
                     })
                 else:
                     if i_e >= m.DROPOUT_ITER:
