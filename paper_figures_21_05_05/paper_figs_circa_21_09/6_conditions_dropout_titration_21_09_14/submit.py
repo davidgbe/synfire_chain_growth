@@ -8,7 +8,7 @@ scripts = [
 ]
 
 for i, rng_seed in enumerate(range(2025, 2030)):
-	for j, drop_sev in [0.3, 0.4, 0.5, 0.6]:
+	for j, drop_sev in enumerate([0.3, 0.4, 0.5, 0.6]):
 		for src_name in scripts:
 			name_parts = src_name.split('.')
 			dst_name = name_parts[0] + '_' + str(i) + '.' + name_parts[1]
