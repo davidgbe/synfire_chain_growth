@@ -2,12 +2,9 @@ import os
 
 base_path = os.curdir
 scripts = [
-	'submit_pop_only.slurm',
-	'submit_pop_silent.slurm',
+	'submit_single_only.slurm',
 	'submit_pop_single_no_silent.slurm',
 	'submit_pop_single_silent.slurm',
-	'submit_single_only.slurm',
-	'submit_single_silent_only.slurm',
 ]
 
 for i, rng_seed in enumerate(range(2025, 2030)):

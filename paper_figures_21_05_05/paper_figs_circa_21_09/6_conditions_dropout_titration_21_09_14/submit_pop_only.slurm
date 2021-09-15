@@ -1,13 +1,13 @@
 #!/bin/bash
 
 ## Presets
-#SBATCH --job-name=no_silent_drop
+#SBATCH --job-name=pop_only
 
 #SBATCH -p stf
 #SBATCH -A stf
 
 #SBATCH --nodes=1
-#SBATCH --time=08:00:00
+#SBATCH --time=06:00:00
 #SBATCH --ntasks=12
 #SBATCH --mem=80G
 
