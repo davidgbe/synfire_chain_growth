@@ -28,7 +28,7 @@ for i, rng_seed in enumerate(range(2025, 2060)):
 					'DROP_SEV': str(drop_sev),
 				}
 				line_replaced = replace_all(line, params)
-				dist.write(line_replaced)
+				dst.write(line_replaced)
 			src.close()
 			dst.close()
 
