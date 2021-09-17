@@ -18,13 +18,18 @@ def format_title(params):
 		title += ('_' + k + '_' + v)
 	return title
 
+def iter_range(r, n):
+	for i in range(n):
+		yield (i, i * (r[1] - r[0]) / n + r[0])
+
+
 alpha_1_range = (1e-2, 5e-2)
 alpha_2_range = (1e-2, 5e-2)
 
 for i, rng_seed in enumerate(range(2025, 2060)):
 	for src_name in scripts:
-		for j, alpha_1 in enumerate(range(alpha_1_range[0], alpha_1_range[1], (alpha_1_range[1] - alpha_1_range[0])/5)):
-			for k, alpha_2 in enumerate(range(alpha_2_range[0], alpha_2_range[1], (alpha_2_range[1] - alpha_2_range[0])/5)):
+		for j, alpha_1 in iter_range(alpha_1_range, 5)
+			for k, alpha_2 in iter_range(alpha_2_range, 5)
 				name_parts = src_name.split('.')
 				dst_name = name_parts[0] + '_' + str(i) + '_' + str(j) + '_' + str(k) + '.' + name_parts[1]
 
