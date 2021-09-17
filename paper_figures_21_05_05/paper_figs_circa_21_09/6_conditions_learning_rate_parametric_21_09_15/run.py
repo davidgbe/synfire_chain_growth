@@ -633,7 +633,7 @@ def clip(f, n=1):
     f_str = f_str[:(f_str.find('.') + 1 + n)]
     return f_str
 
-title = f'{args.title[0]}_d_{M.DROPOUT_SEV}ff_{clip(M.W_E_E_R / (0.26 * 0.004))}_pf_{clip(M.CON_PROB_FF, 2)}_pr_{clip(M.CON_PROB_R, 2)}_eir_{clip(M.W_E_I_R * 1e5)}_ier_{clip(M.W_I_E_R * 1e5)}'
+title = f'{args.title[0]}_ff_{clip(M.W_E_E_R / (0.26 * 0.004))}_pf_{clip(M.CON_PROB_FF, 2)}_pr_{clip(M.CON_PROB_R, 2)}_eir_{clip(M.W_E_I_R * 1e5)}_ier_{clip(M.W_I_E_R * 1e5)}'
 
 for i in range(1):
     w_r_e = None
