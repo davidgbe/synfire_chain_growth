@@ -28,8 +28,8 @@ alpha_2_range = (1e-2, 5e-2)
 
 for i, rng_seed in enumerate(range(2025, 2060)):
 	for src_name in scripts:
-		for j, alpha_1 in iter_range(alpha_1_range, 5)
-			for k, alpha_2 in iter_range(alpha_2_range, 5)
+		for j, alpha_1 in iter_range(alpha_1_range, 5):
+			for k, alpha_2 in iter_range(alpha_2_range, 5):
 				name_parts = src_name.split('.')
 				dst_name = name_parts[0] + '_' + str(i) + '_' + str(j) + '_' + str(k) + '.' + name_parts[1]
 
