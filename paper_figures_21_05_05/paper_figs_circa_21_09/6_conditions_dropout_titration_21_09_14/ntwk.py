@@ -17,7 +17,7 @@ class LIFNtwkG(object):
     """Network of leaky integrate-and-fire neurons with *conductance-based* synapses."""
     
     def __init__(self, c_m, g_l, e_l, v_th, v_r, t_r, e_s, t_s, w_r, w_u, plasticity_indices, connectivity, W_max, m,
-        sparse=False, output=True, output_freq=1000, homeo=True, weight_update=True):
+        sparse=True, output=True, output_freq=1000, homeo=True, weight_update=True):
         # ntwk size
         n = next(iter(w_r.values())).shape[0]
         self.weight_update = weight_update
@@ -225,10 +225,6 @@ class LIFNtwkG(object):
                     'w_r_i': self.w_r['I'],
                     'avg_input_per_cell': avg_initial_input_per_cell,
                 })
-
-            if t_ctr % 5000 == 0:
-                print(f'{t_ctr / len(i_ext) * 100}% finished' )
-                print(f'completed {dt * t_ctr * 1000} ms of {len(i_ext) * dt} s')
 
             for t, dropout in dropouts:
                 if int(t / dt) == t_ctr:

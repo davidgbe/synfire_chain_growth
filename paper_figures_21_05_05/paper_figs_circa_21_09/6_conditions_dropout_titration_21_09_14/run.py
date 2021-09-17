@@ -14,6 +14,7 @@ from scipy.optimize import curve_fit
 from scipy.sparse import csc_matrix, csr_matrix, kron
 from functools import reduce
 import argparse
+import time
 
 from aux import *
 from disp import *
@@ -271,6 +272,12 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
             for i_e in range(epochs):
 
+                progress = f'{i_e / epochs * 100}'
+                progress = progress[: progress.find('.') + 2]
+                print(f'{progress}% finished')
+
+                start = time.time()
+
                 if i_e == m.DROPOUT_ITER:
                     w_r_copy['E'][:, :(m.N_EXC + m.N_SILENT)], surviving_cell_indices = dropout_on_mat(w_r_copy['E'][:, :(m.N_EXC + m.N_SILENT)], dropout['E'], min_idx=m.DROPOUT_MIN_IDX, max_idx=m.DROPOUT_MAX_IDX)
 
@@ -420,37 +427,37 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         else:
                             return spks[-1]
 
-                    filtered_spks_for_e_cells = np.zeros(spks_for_e_cells.shape)
-                    t_steps_in_burst = int(4e-3/S.DT)
+                    # filtered_spks_for_e_cells = np.zeros(spks_for_e_cells.shape)
+                    # t_steps_in_burst = int(4e-3/S.DT)
 
-                    for i_c in range(spks_for_e_cells.shape[1]):
-                        for i_t in range(spks_for_e_cells.shape[0]):
-                            idx_filter_start = (i_t - t_steps_in_burst) if (i_t - t_steps_in_burst) > 0 else 0
-                            idx_filter_end = (i_t + 1)
+                    # for i_c in range(spks_for_e_cells.shape[1]):
+                    #     for i_t in range(spks_for_e_cells.shape[0]):
+                    #         idx_filter_start = (i_t - t_steps_in_burst) if (i_t - t_steps_in_burst) > 0 else 0
+                    #         idx_filter_end = (i_t + 1)
 
-                            filtered_spks_for_e_cells[i_t, i_c] = burst_kernel(spks_for_e_cells[idx_filter_start: idx_filter_end, i_c])
+                    #         filtered_spks_for_e_cells[i_t, i_c] = burst_kernel(spks_for_e_cells[idx_filter_start: idx_filter_end, i_c])
 
 
 
                     # STDP FOR E CELLS: put in pairwise STDP on filtered_spks_for_e_cells
                     stdp_burst_pair = 0
 
-                    for i_t in range(spks_for_e_cells.shape[0]):
-                        stdp_start = i_t - m.CUT_IDX_TAU_PAIR if i_t - m.CUT_IDX_TAU_PAIR > 0 else 0
+                    # for i_t in range(spks_for_e_cells.shape[0]):
+                    #     stdp_start = i_t - m.CUT_IDX_TAU_PAIR if i_t - m.CUT_IDX_TAU_PAIR > 0 else 0
 
-                        stdp_spk_hist = filtered_spks_for_e_cells[stdp_start:i_t, :]
+                    #     stdp_spk_hist = filtered_spks_for_e_cells[stdp_start:i_t, :]
 
-                        t_points_for_stdp = stdp_spk_hist.shape[0]
-                        curr_spks = filtered_spks_for_e_cells[i_t, :]
+                    #     t_points_for_stdp = stdp_spk_hist.shape[0]
+                    #     curr_spks = filtered_spks_for_e_cells[i_t, :]
 
-                        if t_points_for_stdp > 0:
-                            sparse_curr_spks = csc_matrix(curr_spks)
-                            sparse_spks = csc_matrix(np.flip(stdp_spk_hist, axis=0))
+                    #     if t_points_for_stdp > 0:
+                    #         sparse_curr_spks = csc_matrix(curr_spks)
+                    #         sparse_spks = csc_matrix(np.flip(stdp_spk_hist, axis=0))
 
-                            # compute sparse pairwise correlations with curr_spks and spikes in stdp pairwise time window & dot into pairwise kernel
-                            stdp_burst_pair += kron(curr_spks, sparse_spks).T.dot(m.KERNEL_PAIR[:t_points_for_stdp]).reshape(spks_for_e_cells.shape[1], spks_for_e_cells.shape[1])
-                        else:
-                            stdp_burst_pair += 0.
+                    #         # compute sparse pairwise correlations with curr_spks and spikes in stdp pairwise time window & dot into pairwise kernel
+                    #         stdp_burst_pair += kron(curr_spks, sparse_spks).T.dot(m.KERNEL_PAIR[:t_points_for_stdp]).reshape(spks_for_e_cells.shape[1], spks_for_e_cells.shape[1])
+                    #     else:
+                    #         stdp_burst_pair += 0.
 
 
 
@@ -510,17 +517,14 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         i_diffs = i_cell_fr_setpoints - np.sum(spks_for_i_cells > 0, axis=0)
                         fr_update_i = i_diffs.reshape(i_diffs.shape[0], 1) * np.ones((m.N_INH, m.N_EXC + m.N_SILENT)).astype(float)
 
-                    print('fr_update_e', fr_update_e)
-                    print('fr_pop_update', fr_pop_update)
-                    print('fr_update_i', fr_update_i)
-
                     e_total_potentiation = m.ETA * (m.ALPHA_1 * fr_update_e + m.BETA * stdp_burst_pair + m.GAMMA * fr_pop_update)
                     i_total_potentiation = m.ETA * (m.ALPHA_2 * fr_update_i)
 
-                    e_total_potentiation[:m.DROPOUT_MIN_IDX, :] = 0
-                    e_total_potentiation[m.DROPOUT_MAX_IDX:, :] = 0
-                    e_total_potentiation[:, :m.DROPOUT_MIN_IDX] = 0
-                    e_total_potentiation[:, m.DROPOUT_MAX_IDX:] = 0
+                    if type(e_total_potentiation) is not float:
+                        e_total_potentiation[:m.DROPOUT_MIN_IDX, :] = 0
+                        e_total_potentiation[m.DROPOUT_MAX_IDX:, :] = 0
+                        e_total_potentiation[:, :m.DROPOUT_MIN_IDX] = 0
+                        e_total_potentiation[:, m.DROPOUT_MAX_IDX:] = 0
                     if type(i_total_potentiation) is not float:
                         try:
                             i_total_potentiation[:, :m.DROPOUT_MIN_IDX] = 0
@@ -529,7 +533,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                             breakpoint()
 
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] += (e_total_potentiation * w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)])
-                    print('delta_e', (e_total_potentiation * w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)]))
                     w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)] += (i_total_potentiation * w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)])
 
                     w_r_copy['E'][w_r_copy['E'] < 0] = 0
@@ -595,6 +598,11 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                                     'inh_raster': inh_raster,
                                     'surviving_cell_indices': surviving_cell_indices,
                                 })
+                end = time.time()
+                secs_per_cycle = f'{end - start}'
+                secs_per_cycle = secs_per_cycle[:secs_per_cycle.find('.') + 2]
+                print(f'{secs_per_cycle} s')
+
 
 
 def quick_plot(m, run_title='', w_r_e=None, w_r_i=None, repeats=1, show_connectivity=True, n_show_only=None, add_noise=True, dropouts=[{'E': 0, 'I': 0}]):
