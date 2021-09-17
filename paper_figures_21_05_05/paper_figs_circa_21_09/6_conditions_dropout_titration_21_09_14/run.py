@@ -97,6 +97,7 @@ M = Generic(
     # Dropout params
     DROPOUT_MIN_IDX=0,
     DROPOUT_ITER=100,
+    DROPOUT_SEV=args.dropout_per[0],
 
     E_SINGLE_FR_TRIALS=(1, 21),
     I_SINGLE_FR_TRIALS=(31, 51),
@@ -119,7 +120,7 @@ M = Generic(
     GAMMA=args.gamma[0], #1e-4,
 )
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=180e-3, EPOCHS=2000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=180e-3, EPOCHS=1000)
 np.random.seed(S.RNG_SEED)
 
 M.W_U_E = M.W_E_E_R / M.PROJECTION_NUM * 2.5
@@ -632,7 +633,7 @@ def clip(f, n=1):
     f_str = f_str[:(f_str.find('.') + 1 + n)]
     return f_str
 
-title = f'{args.title[0]}_ff_{clip(M.W_E_E_R / (0.26 * 0.004))}_pf_{clip(M.CON_PROB_FF, 2)}_pr_{clip(M.CON_PROB_R, 2)}_eir_{clip(M.W_E_I_R * 1e5)}_ier_{clip(M.W_I_E_R * 1e5)}'
+title = f'{args.title[0]}_d_{M.DROPOUT_SEV}ff_{clip(M.W_E_E_R / (0.26 * 0.004))}_pf_{clip(M.CON_PROB_FF, 2)}_pr_{clip(M.CON_PROB_R, 2)}_eir_{clip(M.W_E_I_R * 1e5)}_ier_{clip(M.W_I_E_R * 1e5)}'
 
 for i in range(1):
     w_r_e = None
@@ -642,5 +643,5 @@ for i in range(1):
     print(w_r_e, w_r_i)
 
     all_rsps = quick_plot(M, run_title=title, w_r_e=w_r_e, w_r_i=w_r_i, dropouts=[
-        {'E': args.dropout_per[0], 'I': 0},
+        {'E': M.DROPOUT_SEV, 'I': 0},
     ])
