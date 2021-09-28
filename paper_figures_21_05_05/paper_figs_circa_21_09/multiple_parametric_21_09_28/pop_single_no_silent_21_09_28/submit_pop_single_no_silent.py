@@ -61,5 +61,5 @@ for i, rng_seed in enumerate(range(2025, 2055)):
 					src.close()
 					dst.close()
 
-					# os.system('sbatch ./' + dst_name)
+					os.system('sbatch ./' + dst_name)
 					print(dst_name)
