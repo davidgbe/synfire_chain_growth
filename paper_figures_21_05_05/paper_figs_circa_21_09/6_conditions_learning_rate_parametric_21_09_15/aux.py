@@ -83,3 +83,18 @@ def dropout_on_mat(mat, percent, min_idx=0, max_idx=None):
     m = copy(mat)
     m[:, survival_indices == 0] = 0
     return m, survival_indices
+
+def safe_apply_stat(data, metric):
+    out = []
+    l = np.max([len(d) for d in data])
+    for i in range(l):
+        all_data_i = []
+        for j, arr in enumerate(data):
+            if i < len(arr):
+                all_data_i.append(arr[i])
+        out.append(metric(all_data_i))
+    return np.array(out)
+
+def flatten(a):
+    return [x for y in a for x in y]
+
