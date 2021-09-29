@@ -36,7 +36,7 @@ alpha_1_range = (1e-2, 5e-2)
 alpha_2_range = (1e-2, 5e-2)
 gamma_range = (0, 2e-4)
 
-for i, rng_seed in enumerate(range(2025, 2055)):
+for i, rng_seed in enumerate(range(2027, 2055)):
 	for src_name in scripts:
 		for j, alpha_1 in iter_range(alpha_1_range, 5):
 			for k, alpha_2 in iter_range(alpha_2_range, 5):
