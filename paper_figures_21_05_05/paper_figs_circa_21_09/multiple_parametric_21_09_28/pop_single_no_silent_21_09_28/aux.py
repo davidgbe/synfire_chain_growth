@@ -98,3 +98,36 @@ def safe_apply_stat(data, metric):
 def flatten(a):
     return [x for y in a for x in y]
 
+def map_to_list(func, l):
+    '''
+    Maps the list 'l' through the function 'func'
+    Parameters
+    ----------
+    func : function
+        Takes a single argument of type of 'l'
+    l : list
+    '''
+    return list(map(func, l))
+
+def reduce_mult(l):
+    return functools.reduce(lambda e1, e2: e1 * e2, l, 1)
+
+# multidimensional generalization of a cartesian proces
+# given [2, 4, 6] and [2, 5, 8, 9] generates
+# [[2, 2, 2, 2, 4, 4, 4, 4, 6, 6, 6, 6], [2, 5, 8, 9, 2, 5, 8, 9, 2, 5, 8, 9]]
+def cartesian(*arrs):
+    domain = map_to_list(lambda a: len(a), arrs)
+    coordinate_lists = []
+    for i, dim in enumerate(domain):
+        coords = []
+        mult = 1
+        if i != len(domain) - 1:
+            mult = reduce_mult(domain[i+1:])
+        for e in arrs[i]:
+            coords += (mult * [e])
+        repeat_factor = reduce_mult(domain[0:i])
+        if repeat_factor > 0:
+            coords *= repeat_factor
+        coordinate_lists.append(coords)
+    return coordinate_lists
+
