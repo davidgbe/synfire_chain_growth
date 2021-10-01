@@ -75,7 +75,7 @@ def pad_zeros(to_pad, length):
 batch_size = 12
 
 params = OrderedDict()
-params['SEED'] = [str(i) for i in range(2030, 2055)]
+params['SEED'] = [str(i) for i in range(2031, 2055)]
 params['ALPHA_1'] = ((1e-2, 5e-2), 5)
 params['ALPHA_2'] = ((1e-2, 5e-2), 5)
 params['GAMMA'] = ((0, 2e-4), 5)
@@ -99,7 +99,7 @@ for src_name in scripts:
 		dst = open(dst_name, 'wt')
 
 		for line in src:
-			if line.find('python') >= 0:
+			if line.find('python run.py') >= 0:
 				for batch_idx in range(batch_size):
 					if n + batch_idx >= n_scripts:
 						continue
