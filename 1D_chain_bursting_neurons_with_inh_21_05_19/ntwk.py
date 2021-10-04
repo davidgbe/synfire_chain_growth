@@ -17,7 +17,7 @@ def alpha_func(tidx, dt, tau):
 class LIFNtwkI(object):
     """Network of leaky integrate-and-fire neurons with *current-based* synapses."""
     
-    def __init__(self, c_m, g_l, e_l, v_th, v_r, t_r, w_r, w_u, i_b, f_b, t_b, t_a, sparse=False):
+    def __init__(self, c_m, g_l, e_l, v_th, v_r, t_r, w_r, w_u, i_b, f_b, t_b, t_a, sparse=True):
         # ntwk size
         n = w_r.shape[0]
         

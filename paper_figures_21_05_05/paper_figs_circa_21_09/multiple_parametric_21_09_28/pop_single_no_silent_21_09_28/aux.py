@@ -68,8 +68,10 @@ def rand_per_row_mat(n, shape):
 def mat_1_if_under_val(val, shape):
     return np.where(np.random.rand(*shape) < val, 1, 0)
 
+
 def gaussian_if_under_val(val, shape, mean, std):
     return np.where(np.random.rand(*shape) < val, np.random.normal(loc=mean, scale=std, size=shape), 0)
+
 
 def dropout_on_mat(mat, percent, min_idx=0, max_idx=None):
     if max_idx is None:
@@ -84,6 +86,7 @@ def dropout_on_mat(mat, percent, min_idx=0, max_idx=None):
     m[:, survival_indices == 0] = 0
     return m, survival_indices
 
+
 def safe_apply_stat(data, metric):
     out = []
     l = np.max([len(d) for d in data])
@@ -95,8 +98,10 @@ def safe_apply_stat(data, metric):
         out.append(metric(all_data_i))
     return np.array(out)
 
+
 def flatten(a):
     return [x for y in a for x in y]
+
 
 def map_to_list(func, l):
     '''
@@ -109,8 +114,10 @@ def map_to_list(func, l):
     '''
     return list(map(func, l))
 
+
 def reduce_mult(l):
     return functools.reduce(lambda e1, e2: e1 * e2, l, 1)
+
 
 # multidimensional generalization of a cartesian proces
 # given [2, 4, 6] and [2, 5, 8, 9] generates
