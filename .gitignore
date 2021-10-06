@@ -7,3 +7,6 @@
 **/__pycache__/*
 **/*.zip
 **/*.z*
+**/*.out
+**/*[0-9].slurm
+**/parsed_data
