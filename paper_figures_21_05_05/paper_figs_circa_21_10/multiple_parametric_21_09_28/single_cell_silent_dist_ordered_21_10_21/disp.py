@@ -88,6 +88,8 @@ def graph_weight_matrix(mat, title, v_max=None, ax=None, cmap='hot'):
     
     if ax is None:
         fig, ax = plt.subplots(1, 1, figsize=(4, 4), tight_layout=True)
+    else:
+        fig = None
     
     ax.matshow(mat, vmin=0, vmax=v_max if v_max is not None else mat.max(), cmap=cmap)
     ax.set_title(title)

@@ -56,13 +56,13 @@ M = Generic(
     G_L_I=.4e-3, 
     E_L_I=-.057,
     V_TH_I=-.043,
-    T_R_I=1e-3,
+    T_R_I=0.25e-3,
     E_R_I=-.057, # reset voltage (V)
     
     # syn rev potentials and decay times
     E_E=0, E_I=-.09, E_A=-.07, T_E=.004, T_I=.004, T_A=.006,
     
-    N_EXC=900,
+    N_EXC=2000,
     N_SILENT=0,
     N_INH=450,
     M=20,
@@ -73,27 +73,27 @@ M = Generic(
     PROJECTION_NUM=20,
     INPUT_STD=1e-3,
     BURST_T=1.5e-3,
-    INPUT_DELAY=10e-3,
+    INPUT_DELAY=50e-3,
     
     # OTHER INPUTS
-    SGM_N=.5e-10,  # noise level (A*sqrt(s))
+    SGM_N=10e-10,  # noise level (A*sqrt(s))
     I_EXT_B=0,  # additional baseline current input
 
     # Connection probabilities
-    N_CONS_PER_CELL=25,
-    SYN_PROP_DIST_EXP=1.5,
+    MEAN_N_CONS_PER_CELL=45,
+    SYN_PROP_DIST_EXP=1.7,
     CON_PROB_FF_CONST=1,
     CON_PROB_R=0.,
-    E_I_CON_PER_LINK=1,
-    I_E_CON_PROB=0.8,
+    E_I_CON_PROB=0.05,
+    I_E_CON_PROB=0.6,
 
     # Weights
-    W_E_I_R=2e-5,
+    W_E_I_R=1.5e-5,
     W_E_I_R_MAX=10e-5,
-    W_I_E_R=0.3e-5,
+    W_I_E_R=0.38e-5,
     W_A=0,
-    W_E_E_R=0.26 * 0.004 * 1.6,
-    W_E_E_R_MAX=0.26 * 0.004 * 4.8,
+    W_E_E_R=0.26 * 0.004 * 1.3,
+    W_E_E_R_MAX=0.26 * 0.004 * 10,
 
     # Dropout params
     DROPOUT_MIN_IDX=0,
@@ -116,7 +116,7 @@ M = Generic(
     GAMMA=args.gamma[0], #1e-4,
 )
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=180e-3, EPOCHS=1000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.22e-3, T=250e-3, EPOCHS=1000)
 np.random.seed(S.RNG_SEED)
 
 M.CON_PROBS_FF = np.exp(-1 * np.arange(M.N_EXC / M.PROJECTION_NUM) / M.CON_PROB_FF_CONST)
@@ -160,18 +160,19 @@ def generate_exc_ff_chain(m):
         ### alpha * total_incoming_cons = gamma * n_cells_in_layer * sum_{i=0}^{current_layer} e^{-(current_layer - i)/tau}
         ### Solve the above for gamma
 
-        gamma = m.N_CONS_PER_CELL * synfire_proportion / (m.PROJECTION_NUM * (1 - np.exp(-10/m.CON_PROB_FF_CONST))/(1 - np.exp(-1/m.CON_PROB_FF_CONST)))
+        gamma = m.MEAN_N_CONS_PER_CELL * synfire_proportion / (m.PROJECTION_NUM * (1 - np.exp(-10/m.CON_PROB_FF_CONST))/(1 - np.exp(-1/m.CON_PROB_FF_CONST)))
 
         for i, l_idx in enumerate(reversed(range(layer_idx))):
             cons_for_cell[0, (l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] = gaussian_if_under_val(gamma * M.CON_PROBS_FF[i], (1, m.PROJECTION_NUM), w, 0.3 * w)
-
-        n_rand_cons = m.N_CONS_PER_CELL * (1 - synfire_proportion)
+        print('')
+        print(np.count_nonzero(cons_for_cell))
+        n_rand_cons = m.MEAN_N_CONS_PER_CELL * (1 - synfire_proportion)
 
         if layer_idx > 0:
             cons_for_cell[0, :(layer_idx * m.PROJECTION_NUM)] += gaussian_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (layer_idx * m.PROJECTION_NUM,), 0.7 * w * (1 - synfire_proportion), 0.3 * w)
         if layer_idx < n_layers - 1:
             cons_for_cell[0, ((layer_idx + 1) * m.PROJECTION_NUM):m.N_EXC] += gaussian_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (m.N_EXC - ((layer_idx + 1) * m.PROJECTION_NUM),), 0.7 * w * (1 - synfire_proportion), 0.3 * w)
-
+        print(np.count_nonzero(cons_for_cell))
         return cons_for_cell
 
     unit_funcs = []
@@ -202,6 +203,9 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
     robustness_output_dir = f'./robustness/{output_dir_name}'
     os.makedirs(robustness_output_dir)
+
+    sampled_cell_output_dir = f'./sampled_cell_rasters/{output_dir_name}'
+    os.makedirs(sampled_cell_output_dir)
     
     w_u_e = np.diag(np.ones(m.N_DRIVING_CELLS)) * m.W_U_E
     
@@ -229,27 +233,24 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
     if w_r_e is None:
         w_e_e_r = generate_exc_ff_chain(m)
 
-        ax, fig = graph_weight_matrix(w_e_e_r, 'w_e_e_r\n')
-        fig.savefig('./figures/mat.png')
-
         np.fill_diagonal(w_e_e_r, 0.)
 
-        con_per_i = m.E_I_CON_PER_LINK * m.N_EXC / m.PROJECTION_NUM
-        e_i_r = rand_per_row_mat(int(con_per_i), (m.N_INH, m.N_EXC))
-        s_e_r = rand_per_row_mat(int(0.1 * m.N_SILENT), (m.N_EXC, m.N_SILENT))
+        e_i_r = gaussian_if_under_val(m.E_I_CON_PROB, (m.N_INH, m.N_EXC), m.W_E_I_R, 0.3 * m.W_E_I_R)
+
+        s_e_r = rand_per_row_mat(0, (m.N_EXC, m.N_SILENT))
 
         w_r_e = np.block([
             [ w_e_e_r, s_e_r * m.W_E_E_R / m.PROJECTION_NUM, np.zeros((m.N_EXC, m.N_INH)) ],
             [ np.zeros((m.N_SILENT, m.N_EXC + m.N_SILENT + m.N_INH)) ],
-            [ e_i_r * m.W_E_I_R,  np.zeros((m.N_INH, m.N_INH + m.N_SILENT)) ],
+            [ e_i_r,  np.zeros((m.N_INH, m.N_INH + m.N_SILENT)) ],
         ])
 
     if w_r_i is None:
 
-        i_e_r = mat_1_if_under_val(m.I_E_CON_PROB, (m.N_EXC, m.N_INH))
+        i_e_r = gaussian_if_under_val(m.I_E_CON_PROB, (m.N_EXC, m.N_INH), m.W_I_E_R, 0.3 * m.W_I_E_R)
 
         w_r_i = np.block([
-            [ np.zeros((m.N_EXC, m.N_EXC + m.N_SILENT)), i_e_r * m.W_I_E_R ],
+            [ np.zeros((m.N_EXC, m.N_EXC + m.N_SILENT)), i_e_r],
             [ np.zeros((m.N_SILENT + m.N_INH, m.N_EXC + m.N_SILENT + m.N_INH)) ],
         ])
     
@@ -262,6 +263,16 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
             [ np.zeros((m.N_SILENT + m.N_INH, m.N_EXC + m.N_SILENT + m.N_INH)) ],
         ]),
     }
+
+    def create_prop(prop_exc, prop_inh):
+        return cc([prop_exc * np.ones(m.N_EXC), prop_inh * np.ones(m.N_INH)])
+
+    c_m = create_prop(m.C_M_E, m.C_M_I)
+    g_l = create_prop(m.G_L_E, m.G_L_I)
+    e_l = create_prop(m.E_L_E, m.E_L_I)
+    v_th = create_prop(m.V_TH_E, m.V_TH_I)
+    e_r = create_prop(m.E_R_E, m.E_R_I)
+    t_r = create_prop(m.T_R_E, m.T_R_I)
     
     all_rsps = []
 
@@ -278,6 +289,11 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
             e_cell_pop_fr_setpoint = None
             active_cells_pre_dropout_mask = None
             surviving_cell_indices = None
+
+            sampled_e_cell_rasters = []
+            e_cell_sample_idxs = np.sort((np.random.rand(10) * m.N_EXC).astype(int))
+            sampled_i_cell_rasters = []
+            i_cell_sample_idxs = np.sort((np.random.rand(10) * m.N_INH + m.N_EXC).astype(int))
 
             w_r_copy = copy(w_r)
 
@@ -320,16 +336,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     except IndexError as e:
                         pass
 
-                def create_prop(prop_exc, prop_inh):
-                    return cc([prop_exc * np.ones(m.N_EXC), prop_inh * np.ones(m.N_INH)])
-
-                c_m = create_prop(m.C_M_E, m.C_M_I)
-                g_l = create_prop(m.G_L_E, m.G_L_I)
-                e_l = create_prop(m.E_L_E, m.E_L_I)
-                v_th = create_prop(m.V_TH_E, m.V_TH_I)
-                e_r = create_prop(m.E_R_E, m.E_R_I)
-                t_r = create_prop(m.T_R_E, m.T_R_I)
-
                 ntwk = LIFNtwkG(
                     c_m=c_m,
                     g_l=g_l,
@@ -350,18 +356,51 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     weight_update=False,
                 )
 
-                clamp = Generic(v={0: np.repeat(m.E_L_E, m.N_EXC + m.N_SILENT + m.N_INH)}, spk={})
+                clamp = Generic(v={0: e_l}, spk={})
 
                 # run smln
                 rsp = ntwk.run(dt=S.DT, clamp=clamp, i_ext=i_ext,
                                 output_dir_name=f'{output_dir_name}_{rp_idx}_{d_idx}', spks_u=spks_u,
-                                dropouts=[], m=m, repairs=[],
-                                )
+                                dropouts=[], m=m, repairs=[])
+
+
+                # fig = plt.figure(figsize=(4, 4), tight_layout=True)
+                # ax = fig.add_subplot()
+                # inh_voltages = rsp.vs[int((0.04 + m.INPUT_DELAY)/S.DT):int((0.055 + m.INPUT_DELAY)/S.DT), m.N_EXC:]
+                # mean_inh_voltage = inh_voltages.mean()
+
+                # for i in range(inh_voltages.shape[0]):
+                #     b, f = bin_occurrences(inh_voltages[i, :], bin_size=0.05 * np.abs(mean_inh_voltage), min_val=m.E_I, max_val=-0.04)
+                #     ax.plot(b, f)
+
+                # b, f = bin_occurrences(rsp.vs[int(50e-3 / S.DT), m.N_EXC:], bin_size=0.05 * np.abs(mean_inh_voltage), min_val=m.E_I, max_val=-0.04)
+                # ax.plot(b, f/2, color='black', lw=2)
+                # fig.savefig('inh_volt_dists.png')
+
+                sampled_e_cell_rasters.append(rsp.spks[int((m.INPUT_DELAY + 20e-3)/S.DT):, e_cell_sample_idxs])
+                sampled_i_cell_rasters.append(rsp.spks[int((m.INPUT_DELAY + 20e-3)/S.DT):, i_cell_sample_idxs])
+
+                sampled_trial_number = 10
+                if i_e % sampled_trial_number == 0 and i_e != 0:
+                    fig = plt.figure(figsize=(8, 8), tight_layout=True)
+                    ax = fig.add_subplot()
+                    base_idx = 0
+                    for rasters_for_cell_type in [sampled_e_cell_rasters, sampled_i_cell_rasters]:
+                        for rendition_num in range(len(rasters_for_cell_type)):
+                            for cell_idx in range(rasters_for_cell_type[rendition_num].shape[1]):
+                                spk_times_for_cell = np.nonzero(rasters_for_cell_type[rendition_num][:, cell_idx])[0]
+                                ax.scatter(spk_times_for_cell * S.DT * 1000, (base_idx + cell_idx * len(rasters_for_cell_type) + rendition_num) * np.ones(len(spk_times_for_cell)), s=3, marker='|')
+                        base_idx += sampled_trial_number * rasters_for_cell_type[0].shape[1]
+                    ax.set_xlim(0, 150)
+                    ax.set_xlabel('Time (ms)')
+                    sampled_e_cell_rasters = []
+                    sampled_i_cell_rasters = []
+                    fig.savefig(f'{sampled_cell_output_dir}/sampled_cell_rasters_{int(i_e / sampled_trial_number)}.png')
 
                 scale = 0.8
-                gs = gridspec.GridSpec(5, 1)
-                fig = plt.figure(figsize=(9 * scale, 15 * scale), tight_layout=True)
-                axs = [fig.add_subplot(gs[:2]), fig.add_subplot(gs[2]), fig.add_subplot(gs[3]), fig.add_subplot(gs[4])]
+                gs = gridspec.GridSpec(7, 1)
+                fig = plt.figure(figsize=(9 * scale, 23 * scale), tight_layout=True)
+                axs = [fig.add_subplot(gs[:2]), fig.add_subplot(gs[2]), fig.add_subplot(gs[3]), fig.add_subplot(gs[4]), fig.add_subplot(gs[5:])]
 
                 w_e_e_r_copy = w_r_copy['E'][:m.N_EXC, :m.N_EXC]
 
@@ -373,30 +412,32 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 incoming_con_counts = np.count_nonzero(w_e_e_r_copy, axis=0)
                 incoming_con_bins, incoming_con_freqs = bin_occurrences(incoming_con_counts, bin_size=1)
                 axs[3].plot(incoming_con_bins, incoming_con_freqs)
-                axs[2].set_xlabel('Number of incoming synapses per cell')
-                axs[2].set_ylabel('Counts')
+                axs[3].set_xlabel('Number of incoming synapses per cell')
+                axs[3].set_ylabel('Counts')
+
+                graph_weight_matrix(w_e_e_r_copy, 'w_e_e_r\n', ax=axs[4])
 
                 spks_for_e_cells = rsp.spks[:, :(m.N_EXC + m.N_SILENT)]
                 spks_for_i_cells = rsp.spks[:, (m.N_EXC + m.N_SILENT):(m.N_EXC + m.N_SILENT + m.N_INH)]
                 if surviving_cell_indices is not None:
                     spks_for_e_cells[:, ~(surviving_cell_indices.astype(bool))] = 0
 
-                spk_bins, freqs = bin_occurrences(spks_for_e_cells.sum(axis=0), max_val=200, bin_size=1)
+                spk_bins, freqs = bin_occurrences(spks_for_e_cells.sum(axis=0), max_val=400, bin_size=1)
                 if surviving_cell_indices is not None:
                     freqs[0] -= np.sum(np.where(~(surviving_cell_indices.astype(bool)), 1, 0))
 
                 axs[1].bar(spk_bins, freqs, alpha=0.5)
                 axs[1].set_xlabel('Spks per neuron')
                 axs[1].set_ylabel('Frequency')
-                axs[1].set_xlim(-0.5, 20.5)
+                axs[1].set_xlim(-0.5, 30.5)
                 # axs[1].set_ylim(0, m.N_EXC + m.N_SILENT)
 
                 raster = np.stack([rsp.spks_t, rsp.spks_c])
                 inh_raster = raster[:, raster[1, :] > (m.N_EXC + m.N_SILENT)]
 
-                spk_bins_i, freqs_i = bin_occurrences(spks_for_i_cells.sum(axis=0), max_val=100, bin_size=1)
+                spk_bins_i, freqs_i = bin_occurrences(spks_for_i_cells.sum(axis=0), max_val=400, bin_size=1)
 
-                # axs[1].bar(spk_bins_i, freqs_i, color='black', alpha=0.5)
+                axs[1].bar(spk_bins_i, freqs_i, color='black', alpha=0.5)
 
 
                 if active_cells_pre_dropout_mask is not None:
@@ -418,7 +459,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 axs[0].scatter(inh_raster[0, :] * 1000, inh_raster[1, :], s=1, c='red', zorder=0, alpha=1)
 
                 axs[0].set_ylim(-1, m.N_EXC + m.N_INH)
-                axs[0].set_xlim(0, 0.15 * 1000)
+                axs[0].set_xlim(m.INPUT_DELAY * 1000, 250)
                 axs[0].set_ylabel('Cell Index')
                 axs[0].set_xlabel('Time (ms)')
 

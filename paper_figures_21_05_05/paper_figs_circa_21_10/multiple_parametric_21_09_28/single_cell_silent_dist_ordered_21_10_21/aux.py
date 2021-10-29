@@ -46,7 +46,7 @@ def bin_occurrences(occurrences, min_val=0, max_val=None, bin_size=1):
         if n >= max_idx or n < 0:
             raise IndexError(f'val {occurrences[i]} is out of bounds for min {min_val} and max {max_val}')
         binned[n] += 1
-    return np.arange(max_idx) * bin_size, binned
+    return np.arange(max_idx) * bin_size + min_val, binned
 
 
 def calc_degree_dist(mat):
@@ -67,6 +67,10 @@ def rand_per_row_mat(n, shape):
 
 def mat_1_if_under_val(val, shape):
     return np.where(np.random.rand(*shape) < val, 1, 0)
+
+
+def gaussian(shape, mean, std):
+    return np.random.normal(loc=mean, scale=std, size=shape)
 
 
 def gaussian_if_under_val(val, shape, mean, std):
