@@ -30,7 +30,7 @@ parser.add_argument('--alpha_1', metavar='a1', type=float, nargs=1)
 parser.add_argument('--alpha_2', metavar='a2', type=float, nargs=1)
 parser.add_argument('--beta', metavar='b', type=float, nargs=1)
 parser.add_argument('--gamma', metavar='c', type=float, nargs=1)
-parser.add_argument('--fr_single_sym', metavar='s', type=int, nargs=1)
+parser.add_argument('--fr_single_line_attr', metavar='s', type=int, nargs=1)
 parser.add_argument('--rng_seed', metavar='r', type=int, nargs=1)
 parser.add_argument('--load_mat', metavar='l', type=str, nargs=1)
 parser.add_argument('--dropout_per', metavar='d', type=float, nargs=1)
@@ -108,7 +108,7 @@ M = Generic(
     TAU_STDP_PAIR=30e-3,
     SINGLE_CELL_FR_SETPOINT_MIN=6,
     SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
-    SINGLE_CELL_FR_SYM=bool(args.fr_single_sym[0]),
+    SINGLE_CELL_LINE_ATTR=bool(args.fr_single_line_attr[0]),
     ETA=0.3,
     ALPHA_1=args.alpha_1[0], #3e-2
     ALPHA_2=args.alpha_2[0],
@@ -534,19 +534,17 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                             e_cell_fr_setpoints += np.sum(spks_for_e_cells > 0, axis=0)
                     elif i_e == m.E_SINGLE_FR_TRIALS[1]:
                         e_cell_fr_setpoints = e_cell_fr_setpoints / (m.E_SINGLE_FR_TRIALS[1] - m.E_SINGLE_FR_TRIALS[0])
-                        where_fr_is_0 = (e_cell_fr_setpoints == 0)
-                        if not m.SINGLE_CELL_FR_SYM:
-                            e_cell_fr_setpoints[where_fr_is_0] = np.random.normal   (
-                                loc=m.SINGLE_CELL_FR_SETPOINT_MIN,
-                                scale=m.SINGLE_CELL_FR_SETPOINT_MIN_STD,
-                                size=e_cell_fr_setpoints[where_fr_is_0].shape[0]
-                            )
+                        # where_fr_is_0 = (e_cell_fr_setpoints == 0)
+                        # if m.SINGLE_CELL_LINE_ATTR:
+                        #     e_cell_fr_setpoints[where_fr_is_0] = np.random.normal   (
+                        #         loc=m.SINGLE_CELL_FR_SETPOINT_MIN,
+                        #         scale=m.SINGLE_CELL_FR_SETPOINT_MIN_STD,
+                        #         size=e_cell_fr_setpoints[where_fr_is_0].shape[0]
+                        #     )
                     elif i_e > m.E_SINGLE_FR_TRIALS[1]:
                         e_diffs = e_cell_fr_setpoints - np.sum(spks_for_e_cells > 0, axis=0)
-                        if m.SINGLE_CELL_FR_SYM:
-                            pass
-                        else:
-                            e_diffs[e_diffs >= 0] = 0
+                        if m.SINGLE_CELL_LINE_ATTR:
+                            e_diffs[(e_diffs <= 2) & (e_diffs >= -2)] = 0
                         fr_update_e = e_diffs.reshape(e_diffs.shape[0], 1) * np.ones((m.N_EXC + m.N_SILENT, m.N_EXC + m.N_SILENT)).astype(float)
 
 

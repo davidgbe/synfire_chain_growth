@@ -72,18 +72,21 @@ def pad_zeros(to_pad, length):
 		padded = '0' + padded
 	return padded
 
-batch_size = 12
+batch_size = 5
 
 params = OrderedDict()
-params['SEED'] = [str(i) for i in range(2031, 2055)]
-params['ALPHA_1'] = ((1e-2, 5e-2), 5)
-params['ALPHA_2'] = ((1e-2, 5e-2), 5)
-params['GAMMA'] = ((0, 2e-4), 5)
+params['SEED'] = [str(i) for i in range(2031, 2051)]
+params['ALPHA_1'] = [ 3e-2 ]
+params['ALPHA_2'] = [ 0.5e-2 ]
+params['GAMMA'] = [ 1e-4 ]
+# params['ALPHA_1'] = ((1e-2, 5e-2), 5)
+# params['ALPHA_2'] = ((1e-2, 5e-2), 5)
+# params['GAMMA'] = ((0, 2e-4), 5)
 
-for key in params.keys():
-	if key == 'SEED':
-		continue
-	params[key] = [str(v[1]) for v in iter_range(params[key][0], params[key][1])]
+# for key in params.keys():
+# 	if key == 'SEED':
+# 		continue
+# 	params[key] = [str(v[1]) for v in iter_range(params[key][0], params[key][1])]
 
 all_values = cartesian(*(params.values()))
 n_scripts = len(all_values[0])
