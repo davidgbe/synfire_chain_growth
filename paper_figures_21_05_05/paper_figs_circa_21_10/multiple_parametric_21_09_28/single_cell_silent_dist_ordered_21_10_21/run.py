@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
 import pandas as pd
-from tqdm import tqdm
 import pickle
 from collections import OrderedDict
 import os
