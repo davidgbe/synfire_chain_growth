@@ -76,8 +76,8 @@ batch_size = 5
 
 params = OrderedDict()
 params['SEED'] = [str(i) for i in range(2031, 2051)]
-params['ALPHA_1'] = [ 3e-2 ]
-params['ALPHA_2'] = [ 0.5e-2 ]
+params['ALPHA_1'] = [ str(3e-2) ]
+params['ALPHA_2'] = [ str(0.5e-2) ]
 # params['ALPHA_1'] = ((1e-2, 5e-2), 5)
 # params['ALPHA_2'] = ((1e-2, 5e-2), 5)
 
