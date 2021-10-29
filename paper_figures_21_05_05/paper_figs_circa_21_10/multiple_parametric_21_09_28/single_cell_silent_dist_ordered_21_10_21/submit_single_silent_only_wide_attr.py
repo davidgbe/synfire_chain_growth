@@ -4,7 +4,7 @@ import functools
 
 base_path = os.curdir
 scripts = [
-	'submit_single_silent_only.slurm',
+	'submit_single_silent_only_wide_attr.slurm',
 ]
 drop_sev = 0.5
 
