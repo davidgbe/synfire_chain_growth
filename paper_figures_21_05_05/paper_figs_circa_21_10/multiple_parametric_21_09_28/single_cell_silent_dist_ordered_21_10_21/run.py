@@ -421,7 +421,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 if surviving_cell_indices is not None:
                     spks_for_e_cells[:, ~(surviving_cell_indices.astype(bool))] = 0
 
-                spk_bins, freqs = bin_occurrences(spks_for_e_cells.sum(axis=0), max_val=400, bin_size=1)
+                spk_bins, freqs = bin_occurrences(spks_for_e_cells.sum(axis=0), max_val=800, bin_size=1)
                 if surviving_cell_indices is not None:
                     freqs[0] -= np.sum(np.where(~(surviving_cell_indices.astype(bool)), 1, 0))
 
@@ -434,7 +434,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 raster = np.stack([rsp.spks_t, rsp.spks_c])
                 inh_raster = raster[:, raster[1, :] > (m.N_EXC + m.N_SILENT)]
 
-                spk_bins_i, freqs_i = bin_occurrences(spks_for_i_cells.sum(axis=0), max_val=400, bin_size=1)
+                spk_bins_i, freqs_i = bin_occurrences(spks_for_i_cells.sum(axis=0), max_val=800, bin_size=1)
 
                 axs[1].bar(spk_bins_i, freqs_i, color='black', alpha=0.5)
 
