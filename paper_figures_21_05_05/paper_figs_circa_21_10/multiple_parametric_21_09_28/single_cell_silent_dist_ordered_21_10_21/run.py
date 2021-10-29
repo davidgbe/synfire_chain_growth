@@ -163,15 +163,14 @@ def generate_exc_ff_chain(m):
 
         for i, l_idx in enumerate(reversed(range(layer_idx))):
             cons_for_cell[0, (l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] = gaussian_if_under_val(gamma * M.CON_PROBS_FF[i], (1, m.PROJECTION_NUM), w, 0.3 * w)
-        print('')
-        print(np.count_nonzero(cons_for_cell))
+
         n_rand_cons = m.MEAN_N_CONS_PER_CELL * (1 - synfire_proportion)
 
         if layer_idx > 0:
-            cons_for_cell[0, :(layer_idx * m.PROJECTION_NUM)] += gaussian_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (layer_idx * m.PROJECTION_NUM,), 0.7 * w * (1 - synfire_proportion), 0.3 * w)
+            cons_for_cell[0, :(layer_idx * m.PROJECTION_NUM)] += gaussian_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (layer_idx * m.PROJECTION_NUM,), 0.25 * w * (1 - synfire_proportion), 0.3 * w)
         if layer_idx < n_layers - 1:
-            cons_for_cell[0, ((layer_idx + 1) * m.PROJECTION_NUM):m.N_EXC] += gaussian_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (m.N_EXC - ((layer_idx + 1) * m.PROJECTION_NUM),), 0.7 * w * (1 - synfire_proportion), 0.3 * w)
-        print(np.count_nonzero(cons_for_cell))
+            cons_for_cell[0, ((layer_idx + 1) * m.PROJECTION_NUM):m.N_EXC] += gaussian_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (m.N_EXC - ((layer_idx + 1) * m.PROJECTION_NUM),), 0.25 * w * (1 - synfire_proportion), 0.3 * w)
+
         return cons_for_cell
 
     unit_funcs = []
