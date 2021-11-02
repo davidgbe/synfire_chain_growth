@@ -47,7 +47,7 @@ M = Generic(
     G_L_E=.4e-3,  # membrane leak conductance (T_M (s) = C_M (F/cm^2) / G_L (S/cm^2))
     E_L_E=-.067,  # membrane leak potential (V)
     V_TH_E=-.043,  # membrane spike threshold (V)
-    T_R_E=1e-3,  # refractory period (s)
+    T_R_E=2e-3,  # refractory period (s)
     E_R_E=-0.067, # reset voltage (V)
     
     # Inhibitory membrane
@@ -61,9 +61,9 @@ M = Generic(
     # syn rev potentials and decay times
     E_E=0, E_I=-.09, E_A=-.07, T_E=.004, T_I=.004, T_A=.006,
     
-    N_EXC=4000,
+    N_EXC=300,
     N_SILENT=0,
-    N_INH=450,
+    N_INH=200,
     M=20,
     
     # Input params
@@ -83,25 +83,21 @@ M = Generic(
     SYN_PROP_DIST_EXP=1.7,
     CON_PROB_FF_CONST=1,
     CON_PROB_R=0.,
-    E_I_CON_PROB=0.05,
+    E_I_CON_PROB=0.25,
     I_E_CON_PROB=0.6,
 
     # Weights
-    W_E_I_R=1.5e-5,
+    W_E_I_R=2.5e-5,
     W_E_I_R_MAX=10e-5,
-    W_I_E_R=0.38e-5,
+    W_I_E_R=0.9e-5,
     W_A=0,
     W_E_E_R=0.26 * 0.004 * 1.3,
-    W_E_E_R_MAX=0.26 * 0.004 * 5 * 1.3,
+    W_E_E_R_MAX=0.26 * 0.004 * 5,
 
     # Dropout params
     DROPOUT_MIN_IDX=0,
-    DROPOUT_ITER=100,
-    DROPOUT_SEV=args.dropout_per[0],
-
-    E_SINGLE_FR_TRIALS=(1, 21),
-    I_SINGLE_FR_TRIALS=(31, 51),
-    POP_FR_TRIALS=(61, 81),
+    DROPOUT_ITER=10000,
+    DROPOUT_SEV=0,
 
     # Synaptic plasticity params
     TAU_STDP_PAIR=30e-3,
@@ -115,7 +111,7 @@ M = Generic(
     GAMMA=args.gamma[0], #1e-4,
 )
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.22e-3, T=550e-3, EPOCHS=1000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.22e-3, T=150e-3, EPOCHS=1000)
 np.random.seed(S.RNG_SEED)
 
 M.CON_PROBS_FF = np.exp(-1 * np.arange(M.N_EXC / M.PROJECTION_NUM) / M.CON_PROB_FF_CONST)
@@ -131,65 +127,6 @@ M.DROPOUT_MAX_IDX = M.N_EXC + M.N_SILENT
 
 print('T_M_E =', 1000*M.C_M_E/M.G_L_E, 'ms')  # E cell membrane time constant (C_m/g_m)
 
-
-def generate_ff_chain(size, unit_size, unit_funcs):
-    if size % unit_size != 0:
-        raise ValueError("'unit_size' does not evenly divide size")
-
-    n_units = int(size / unit_size)
-    chain_order = np.arange(0, n_units, dtype=int)
-    mat = np.zeros((size, size))
-
-    for idx in chain_order:
-        layer_start = unit_size * idx
-        for j in range(unit_size):
-            mat[layer_start + j, :] = unit_funcs[layer_start + j]()
-    return mat
-
-def generate_exc_ff_chain(m): 
-
-    def ff_unit_func(layer_idx, synfire_proportion):
-        w = m.W_E_E_R / m.PROJECTION_NUM
-        n_layers = int(m.N_EXC / m.PROJECTION_NUM)
-
-        cons_for_cell = np.zeros((1, m.N_EXC))
-
-        ### For a cell with 'synfire_proportion' alpha, we would like alpha * total_incoming_cons to be very synfire
-        ### Calculation of feed-forward probability scaling coefficient 'gamma':
-        ### alpha * total_incoming_cons = gamma * n_cells_in_layer * sum_{i=0}^{current_layer} e^{-(current_layer - i)/tau}
-        ### Solve the above for gamma
-
-        gamma = m.MEAN_N_CONS_PER_CELL * synfire_proportion / (m.PROJECTION_NUM * (1 - np.exp(-10/m.CON_PROB_FF_CONST))/(1 - np.exp(-1/m.CON_PROB_FF_CONST)))
-
-        for i, l_idx in enumerate(reversed(range(layer_idx))):
-            cons_for_cell[0, (l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] = gaussian_if_under_val(gamma * M.CON_PROBS_FF[i], (1, m.PROJECTION_NUM), w, 0.3 * w)
-
-        n_rand_cons = m.MEAN_N_CONS_PER_CELL * (1 - synfire_proportion)
-
-        if layer_idx > 0:
-            cons_for_cell[0, :(layer_idx * m.PROJECTION_NUM)] += gaussian_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (layer_idx * m.PROJECTION_NUM,), 0.5 * w * (1 - synfire_proportion), 0.3 * w)
-        if layer_idx < n_layers - 1:
-            cons_for_cell[0, ((layer_idx + 1) * m.PROJECTION_NUM):m.N_EXC] += gaussian_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (m.N_EXC - ((layer_idx + 1) * m.PROJECTION_NUM),), 0.5 * w * (1 - synfire_proportion), 0.3 * w)
-
-        return cons_for_cell
-
-    unit_funcs = []
-    s_props = np.power(np.random.rand(m.N_EXC), m.SYN_PROP_DIST_EXP)
-
-    for i in range(m.N_EXC):
-        unit_funcs.append(partial(ff_unit_func, layer_idx=int(i / m.PROJECTION_NUM), synfire_proportion=s_props[i]))
-
-    chain = generate_ff_chain(m.N_EXC, m.PROJECTION_NUM, unit_funcs)
-    chain[chain < 0] = 0
-    return chain
-
-def generate_local_con(m, ff_deg=[0, 1, 2]):
-    def unit_func():
-        return np.random.rand(m.PROJECTION_NUM, m.PROJECTION_NUM)
-
-    unit_funcs = [unit_func] * len(ff_deg)
-
-    return generate_ff_chain(m.N_EXC, m.PROJECTION_NUM, unit_funcs, ff_deg=ff_deg, tempering=[1.] * len(ff_deg))
 
 ### RUN_TEST function
 
@@ -220,18 +157,14 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
         'A': np.zeros((m.N_EXC + m.N_SILENT + m.N_INH, m.N_DRIVING_CELLS + m.N_EXC + m.N_SILENT + m.N_INH)),
     }
 
-    connectivity = np.ones((m.N_EXC, m.N_EXC))
-
-    def solid_unit_func():
-        return np.ones((m.PROJECTION_NUM, m.PROJECTION_NUM))
-
-    def rand_unit_func():
-        return np.random.rand(m.PROJECTION_NUM, m.PROJECTION_NUM)
 
     if w_r_e is None:
-        w_e_e_r = generate_exc_ff_chain(m)
-
+        w_e_e_r = np.random.rand(m.N_EXC, m.N_EXC)
+        w_e_e_r[w_e_e_r > 0.3] = 0
+        w_e_e_r *= (m.W_E_E_R * 0.03 / 0.3)
         np.fill_diagonal(w_e_e_r, 0.)
+
+        connectivity = np.where(w_e_e_r > 0, 1, 0)
 
         e_i_r = gaussian_if_under_val(m.E_I_CON_PROB, (m.N_INH, m.N_EXC), m.W_E_I_R, 0.3 * m.W_E_I_R)
 
@@ -245,7 +178,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
     if w_r_i is None:
 
-        i_e_r = gaussian_if_under_val(m.I_E_CON_PROB, (m.N_EXC, m.N_INH), m.W_I_E_R, 0.3 * m.W_I_E_R)
+        i_e_r = gaussian_if_under_val(m.I_E_CON_PROB, (m.N_EXC, m.N_INH), 0.5 * m.W_I_E_R, 0.3 * m.W_I_E_R)
 
         w_r_i = np.block([
             [ np.zeros((m.N_EXC, m.N_EXC + m.N_SILENT)), i_e_r],
@@ -282,11 +215,8 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
         
         for d_idx, dropout in enumerate(dropouts):
 
-            e_cell_fr_setpoints = None
-            i_cell_fr_setpoints = None
-            e_cell_pop_fr_setpoint = None
-            active_cells_pre_dropout_mask = None
-            surviving_cell_indices = None
+            e_cell_fr_setpoints = np.ones(m.N_EXC)
+            e_cell_pop_fr_setpoint = 2 * m.PROJECTION_NUM
 
             sampled_e_cell_rasters = []
             e_cell_sample_idxs = np.sort((np.random.rand(10) * m.N_EXC).astype(int))
@@ -302,9 +232,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 print(f'{progress}% finished')
 
                 start = time.time()
-
-                if i_e == m.DROPOUT_ITER:
-                    w_r_copy['E'][:, :(m.N_EXC + m.N_SILENT)], surviving_cell_indices = dropout_on_mat(w_r_copy['E'][:, :(m.N_EXC + m.N_SILENT)], dropout['E'], min_idx=m.DROPOUT_MIN_IDX, max_idx=m.DROPOUT_MAX_IDX)
 
                 t = np.arange(0, S.T, S.DT)
 
@@ -413,16 +340,12 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 axs[3].set_xlabel('Number of incoming synapses per cell')
                 axs[3].set_ylabel('Counts')
 
-                graph_weight_matrix(w_e_e_r_copy, 'w_e_e_r\n', ax=axs[4])
+                graph_weight_matrix(w_e_e_r_copy, 'w_e_e_r\n', ax=axs[4], v_max=m.W_E_E_R * .25)
 
                 spks_for_e_cells = rsp.spks[:, :(m.N_EXC + m.N_SILENT)]
                 spks_for_i_cells = rsp.spks[:, (m.N_EXC + m.N_SILENT):(m.N_EXC + m.N_SILENT + m.N_INH)]
-                if surviving_cell_indices is not None:
-                    spks_for_e_cells[:, ~(surviving_cell_indices.astype(bool))] = 0
 
                 spk_bins, freqs = bin_occurrences(spks_for_e_cells.sum(axis=0), max_val=800, bin_size=1)
-                if surviving_cell_indices is not None:
-                    freqs[0] -= np.sum(np.where(~(surviving_cell_indices.astype(bool)), 1, 0))
 
                 axs[1].bar(spk_bins, freqs, alpha=0.5)
                 axs[1].set_xlabel('Spks per neuron')
@@ -438,26 +361,12 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 axs[1].bar(spk_bins_i, freqs_i, color='black', alpha=0.5)
 
 
-                if active_cells_pre_dropout_mask is not None:
-                    exc_cells_initially_active = copy(spks_for_e_cells)
-                    exc_cells_initially_active[:, ~active_cells_pre_dropout_mask] = 0
-                    exc_cells_initially_active = np.stack(exc_cells_initially_active.nonzero())
-
-                    exc_cells_newly_active = copy(spks_for_e_cells)
-                    exc_cells_newly_active[:, active_cells_pre_dropout_mask] = 0
-                    exc_cells_newly_active = np.stack(exc_cells_newly_active.nonzero())
-
-                    axs[0].scatter(exc_cells_initially_active[0, :] * S.DT * 1000, exc_cells_initially_active[1, :], s=1, c='black', zorder=0, alpha=0.2)
-                    axs[0].scatter(exc_cells_newly_active[0, :] * S.DT * 1000, exc_cells_newly_active[1, :], s=1, c='green', zorder=1, alpha=1)
-                else:
-                    exc_raster = raster[:, raster[1, :] < (m.N_EXC + m.N_SILENT)]
-
-                    axs[0].scatter(exc_raster[0, :] * 1000, exc_raster[1, :], s=1, c='black', zorder=0, alpha=1)
-
+                exc_raster = raster[:, raster[1, :] < (m.N_EXC + m.N_SILENT)]
+                axs[0].scatter(exc_raster[0, :] * 1000, exc_raster[1, :], s=1, c='black', zorder=0, alpha=1)
                 axs[0].scatter(inh_raster[0, :] * 1000, inh_raster[1, :], s=1, c='red', zorder=0, alpha=1)
 
                 axs[0].set_ylim(-1, m.N_EXC + m.N_INH)
-                axs[0].set_xlim(m.INPUT_DELAY * 1000, 550)
+                axs[0].set_xlim(m.INPUT_DELAY * 1000, 100)
                 axs[0].set_ylabel('Cell Index')
                 axs[0].set_xlabel('Time (ms)')
 
@@ -478,8 +387,8 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         'inh_raster': inh_raster,
                     })
                 else:
-                    if i_e >= m.DROPOUT_ITER:
-                        spks_for_e_cells[:, ~surviving_cell_indices.astype(int)] = 0
+                    if i_e % 100 == 0:
+                        e_cell_pop_fr_setpoint += m.PROJECTION_NUM
 
                     # filter e cell spks for start of bursts
                     def burst_kernel(spks):
@@ -488,123 +397,85 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         else:
                             return spks[-1]
 
-                    # filtered_spks_for_e_cells = np.zeros(spks_for_e_cells.shape)
-                    # t_steps_in_burst = int(4e-3/S.DT)
+                    filtered_spks_for_e_cells = np.zeros(spks_for_e_cells.shape)
+                    t_steps_in_burst = int(20e-3/S.DT)
 
-                    # for i_c in range(spks_for_e_cells.shape[1]):
-                    #     for i_t in range(spks_for_e_cells.shape[0]):
-                    #         idx_filter_start = (i_t - t_steps_in_burst) if (i_t - t_steps_in_burst) > 0 else 0
-                    #         idx_filter_end = (i_t + 1)
+                    for i_c in range(spks_for_e_cells.shape[1]):
+                        for i_t in range(spks_for_e_cells.shape[0]):
+                            idx_filter_start = (i_t - t_steps_in_burst) if (i_t - t_steps_in_burst) > 0 else 0
+                            idx_filter_end = (i_t + 1)
 
-                    #         filtered_spks_for_e_cells[i_t, i_c] = burst_kernel(spks_for_e_cells[idx_filter_start: idx_filter_end, i_c])
-
+                            filtered_spks_for_e_cells[i_t, i_c] = burst_kernel(spks_for_e_cells[idx_filter_start: idx_filter_end, i_c])
 
 
                     # STDP FOR E CELLS: put in pairwise STDP on filtered_spks_for_e_cells
                     stdp_burst_pair = 0
 
-                    # for i_t in range(spks_for_e_cells.shape[0]):
-                    #     stdp_start = i_t - m.CUT_IDX_TAU_PAIR if i_t - m.CUT_IDX_TAU_PAIR > 0 else 0
+                    for i_t in range(spks_for_e_cells.shape[0]):
+                        stdp_start = i_t - m.CUT_IDX_TAU_PAIR if i_t - m.CUT_IDX_TAU_PAIR > 0 else 0
 
-                    #     stdp_spk_hist = filtered_spks_for_e_cells[stdp_start:i_t, :]
+                        stdp_spk_hist = filtered_spks_for_e_cells[stdp_start:i_t, :]
 
-                    #     t_points_for_stdp = stdp_spk_hist.shape[0]
-                    #     curr_spks = filtered_spks_for_e_cells[i_t, :]
+                        t_points_for_stdp = stdp_spk_hist.shape[0]
+                        curr_spks = filtered_spks_for_e_cells[i_t, :]
 
-                    #     if t_points_for_stdp > 0:
-                    #         sparse_curr_spks = csc_matrix(curr_spks)
-                    #         sparse_spks = csc_matrix(np.flip(stdp_spk_hist, axis=0))
+                        if t_points_for_stdp > 0:
+                            sparse_curr_spks = csc_matrix(curr_spks)
+                            sparse_spks = csc_matrix(np.flip(stdp_spk_hist, axis=0))
 
-                    #         # compute sparse pairwise correlations with curr_spks and spikes in stdp pairwise time window & dot into pairwise kernel
-                    #         stdp_burst_pair += kron(curr_spks, sparse_spks).T.dot(m.KERNEL_PAIR[:t_points_for_stdp]).reshape(spks_for_e_cells.shape[1], spks_for_e_cells.shape[1])
-                    #     else:
-                    #         stdp_burst_pair += 0.
-
+                            # compute sparse pairwise correlations with curr_spks and spikes in stdp pairwise time window & dot into pairwise kernel
+                            stdp_burst_pair_for_t_step = kron(curr_spks, sparse_spks).T.dot(m.KERNEL_PAIR[:t_points_for_stdp]).reshape(spks_for_e_cells.shape[1], spks_for_e_cells.shape[1])
+                            stdp_burst_pair += stdp_burst_pair_for_t_step
+                            stdp_burst_pair -= stdp_burst_pair_for_t_step.T
+                        else:
+                            stdp_burst_pair += 0.
 
 
                     # E SINGLE-CELL FIRING RATE RULE
                     fr_update_e = 0
 
-                    if i_e >= m.E_SINGLE_FR_TRIALS[0] and i_e < m.E_SINGLE_FR_TRIALS[1]:
-                        if e_cell_fr_setpoints is None:
-                            e_cell_fr_setpoints = np.sum(spks_for_e_cells > 0, axis=0)
-                        else:
-                            e_cell_fr_setpoints += np.sum(spks_for_e_cells > 0, axis=0)
-                    elif i_e == m.E_SINGLE_FR_TRIALS[1]:
-                        e_cell_fr_setpoints = e_cell_fr_setpoints / (m.E_SINGLE_FR_TRIALS[1] - m.E_SINGLE_FR_TRIALS[0])
-                        # where_fr_is_0 = (e_cell_fr_setpoints == 0)
-                        # if m.SINGLE_CELL_LINE_ATTR:
-                        #     e_cell_fr_setpoints[where_fr_is_0] = np.random.normal   (
-                        #         loc=m.SINGLE_CELL_FR_SETPOINT_MIN,
-                        #         scale=m.SINGLE_CELL_FR_SETPOINT_MIN_STD,
-                        #         size=e_cell_fr_setpoints[where_fr_is_0].shape[0]
-                        #     )
-                    elif i_e > m.E_SINGLE_FR_TRIALS[1]:
-                        e_diffs = e_cell_fr_setpoints - np.sum(spks_for_e_cells > 0, axis=0)
-                        if m.SINGLE_CELL_LINE_ATTR:
-                            e_diffs[(e_diffs <= 2) & (e_diffs >= -2)] = 0
-                        fr_update_e = e_diffs.reshape(e_diffs.shape[0], 1) * np.ones((m.N_EXC + m.N_SILENT, m.N_EXC + m.N_SILENT)).astype(float)
-
+                    e_diffs = e_cell_fr_setpoints - np.sum(spks_for_e_cells > 0, axis=0)
+                    e_diffs[e_diffs > 0] = 0
+                    fr_update_e = e_diffs.reshape(e_diffs.shape[0], 1) * np.ones((m.N_EXC + m.N_SILENT, m.N_EXC + m.N_SILENT)).astype(float)
 
 
                     # E POPULATION-LEVEL FIRING RATE RULE
-                    fr_pop_update = 0
-
-                    if i_e >= m.POP_FR_TRIALS[0] and i_e < m.POP_FR_TRIALS[1]:
-                        if e_cell_pop_fr_setpoint is None:
-                            e_cell_pop_fr_setpoint = np.sum(spks_for_e_cells)
-                        else:
-                            e_cell_pop_fr_setpoint += np.sum(spks_for_e_cells)
-                    elif i_e == m.POP_FR_TRIALS[1]:
-                        e_cell_pop_fr_setpoint = e_cell_pop_fr_setpoint / (m.POP_FR_TRIALS[1] - m.POP_FR_TRIALS[0])
-                    elif i_e > m.POP_FR_TRIALS[1]:
-                        fr_pop_update = e_cell_pop_fr_setpoint - np.sum(spks_for_e_cells)
-
-
+                    fr_pop_update = e_cell_pop_fr_setpoint - np.sum(spks_for_e_cells)
+                    print(m.ETA * m.GAMMA * fr_pop_update)
+                    fr_pop_step_mean = m.GAMMA * fr_pop_update
+                    fr_pop_step = gaussian((m.N_EXC, m.N_EXC), fr_pop_step_mean, np.abs(fr_pop_step_mean))
 
                     # I SINGLE-CELL FIRING RATE RULE
-                    fr_update_i = 0
+                    # fr_update_i = 0
 
-                    if i_e >= m.I_SINGLE_FR_TRIALS[0] and i_e < m.I_SINGLE_FR_TRIALS[1]:
-                        if i_cell_fr_setpoints is None:
-                            i_cell_fr_setpoints = np.sum(spks_for_i_cells > 0, axis=0)
-                        else:
-                            i_cell_fr_setpoints += np.sum(spks_for_i_cells > 0, axis=0)
-                    elif i_e == m.I_SINGLE_FR_TRIALS[1]:
-                        i_cell_fr_setpoints = i_cell_fr_setpoints / (m.I_SINGLE_FR_TRIALS[1] - m.I_SINGLE_FR_TRIALS[0])
-                    elif i_e > m.I_SINGLE_FR_TRIALS[1]:
-                        i_diffs = i_cell_fr_setpoints - np.sum(spks_for_i_cells > 0, axis=0)
-                        fr_update_i = i_diffs.reshape(i_diffs.shape[0], 1) * np.ones((m.N_INH, m.N_EXC + m.N_SILENT)).astype(float)
+                    # if i_e >= m.I_SINGLE_FR_TRIALS[0] and i_e < m.I_SINGLE_FR_TRIALS[1]:
+                    #     if i_cell_fr_setpoints is None:
+                    #         i_cell_fr_setpoints = np.sum(spks_for_i_cells > 0, axis=0)
+                    #     else:
+                    #         i_cell_fr_setpoints += np.sum(spks_for_i_cells > 0, axis=0)
+                    # elif i_e == m.I_SINGLE_FR_TRIALS[1]:
+                    #     i_cell_fr_setpoints = i_cell_fr_setpoints / (m.I_SINGLE_FR_TRIALS[1] - m.I_SINGLE_FR_TRIALS[0])
+                    # elif i_e > m.I_SINGLE_FR_TRIALS[1]:
+                    #     i_diffs = i_cell_fr_setpoints - np.sum(spks_for_i_cells > 0, axis=0)
+                    #     fr_update_i = i_diffs.reshape(i_diffs.shape[0], 1) * np.ones((m.N_INH, m.N_EXC + m.N_SILENT)).astype(float)
 
-                    e_total_potentiation = m.ETA * (m.ALPHA_1 * fr_update_e + m.BETA * stdp_burst_pair + m.GAMMA * fr_pop_update)
-                    i_total_potentiation = m.ETA * (m.ALPHA_2 * fr_update_i)
+
+                    e_total_potentiation = m.ETA * (m.ALPHA_1 * fr_update_e + m.BETA * stdp_burst_pair + fr_pop_step)
 
                     if type(e_total_potentiation) is not float:
                         e_total_potentiation[:m.DROPOUT_MIN_IDX, :] = 0
-                        e_total_potentiation[m.DROPOUT_MAX_IDX:, :] = 0
+                        e_total_potentiation[m.DROPOUT_MAX_IDX:, :] = 0 
                         e_total_potentiation[:, :m.DROPOUT_MIN_IDX] = 0
                         e_total_potentiation[:, m.DROPOUT_MAX_IDX:] = 0
-                    if type(i_total_potentiation) is not float:
-                        try:
-                            i_total_potentiation[:, :m.DROPOUT_MIN_IDX] = 0
-                            i_total_potentiation[:, m.DROPOUT_MAX_IDX:] = 0
-                        except TypeError as e:
-                            breakpoint()
+
 
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] += (e_total_potentiation * w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)])
-                    w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)] += (i_total_potentiation * w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)])
-
                     w_r_copy['E'][w_r_copy['E'] < 0] = 0
+
 
                     w_e_e_hard_bound = m.W_E_E_R_MAX / m.PROJECTION_NUM
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] > w_e_e_hard_bound] = w_e_e_hard_bound 
-
-                    w_e_i_hard_bound = m.W_E_I_R_MAX
-                    w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)] > m.W_E_I_R_MAX] = m.W_E_I_R_MAX 
-
-
-                    if i_e == m.DROPOUT_ITER - 1:
-                        active_cells_pre_dropout_mask = np.where(spks_for_e_cells.sum(axis=0) > 0, True, False)
+                    # output weight bound   
 
                     if i_e % 10 == 0:
                         if i_e < m.DROPOUT_ITER:
