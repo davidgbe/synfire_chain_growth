@@ -92,7 +92,8 @@ M = Generic(
     W_I_E_R=0.9e-5,
     W_A=0,
     W_E_E_R=0.26 * 0.004 * 1.3,
-    W_E_E_R_MAX=0.26 * 0.004 * 5,
+    W_E_E_R_MAX=0.26 * 0.004 * 1.3,
+    CELL_OUTPUT_MAX=0.26 * 0.004 * 1.3 * 2,
 
     # Dropout params
     DROPOUT_MIN_IDX=0,
@@ -472,10 +473,14 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] += (e_total_potentiation * w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)])
                     w_r_copy['E'][w_r_copy['E'] < 0] = 0
 
+                    # output weight bound
+                    cell_outgoing_weight_totals = w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)].sum(axis=0)
+                    rescaling = np.where(cell_outgoing_weight_totals > m.CELL_OUTPUT_MAX, m.CELL_OUTPUT_MAX / cell_outgoing_weight_totals, 1.)
+                    w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] *= rescaling.reshape(1, rescaling.shape[0])
 
                     w_e_e_hard_bound = m.W_E_E_R_MAX / m.PROJECTION_NUM
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] > w_e_e_hard_bound] = w_e_e_hard_bound 
-                    # output weight bound   
+
 
                     if i_e % 10 == 0:
                         if i_e < m.DROPOUT_ITER:

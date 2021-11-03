@@ -92,7 +92,7 @@ M = Generic(
     W_I_E_R=0.38e-5,
     W_A=0,
     W_E_E_R=0.26 * 0.004 * 1.3,
-    W_E_E_R_MAX=0.26 * 0.004 * 5 * 1.3,
+    W_E_E_R_MAX=0.26 * 0.004 * 10 * 1.3,
 
     # Dropout params
     DROPOUT_MIN_IDX=0,
