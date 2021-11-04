@@ -80,7 +80,7 @@ M = Generic(
 
     # Connection probabilities
     MEAN_N_CONS_PER_CELL=35,
-    SYN_PROP_DIST_EXP=1.5,
+    SYN_PROP_DIST_EXP=1.3,
     CON_PROB_FF_CONST=1,
     CON_PROB_R=0.,
     E_I_CON_PROB=0.05,
@@ -89,7 +89,7 @@ M = Generic(
     # Weights
     W_E_I_R=1.5e-5,
     W_E_I_R_MAX=10e-5,
-    W_I_E_R=0.38e-5,
+    W_I_E_R=0.32e-5,
     W_A=0,
     W_E_E_R=0.26 * 0.004 * 1.3,
     W_E_E_R_MAX=0.26 * 0.004 * 10 * 1.3,
