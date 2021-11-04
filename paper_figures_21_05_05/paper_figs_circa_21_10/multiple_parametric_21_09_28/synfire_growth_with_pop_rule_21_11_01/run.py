@@ -47,7 +47,7 @@ M = Generic(
     G_L_E=.4e-3,  # membrane leak conductance (T_M (s) = C_M (F/cm^2) / G_L (S/cm^2))
     E_L_E=-.067,  # membrane leak potential (V)
     V_TH_E=-.043,  # membrane spike threshold (V)
-    T_R_E=2e-3,  # refractory period (s)
+    T_R_E=1e-3,  # refractory period (s)
     E_R_E=-0.067, # reset voltage (V)
     
     # Inhibitory membrane
@@ -92,7 +92,7 @@ M = Generic(
     W_I_E_R=0.9e-5,
     W_A=0,
     W_E_E_R=0.26 * 0.004 * 1.3,
-    W_E_E_R_MAX=0.26 * 0.004 * 1.3,
+    W_E_E_R_MAX=0.26 * 0.004 * 1.3 * 5,
     CELL_OUTPUT_MAX=0.26 * 0.004 * 1.3 * 2,
 
     # Dropout params
@@ -117,7 +117,7 @@ np.random.seed(S.RNG_SEED)
 
 M.CON_PROBS_FF = np.exp(-1 * np.arange(M.N_EXC / M.PROJECTION_NUM) / M.CON_PROB_FF_CONST)
 
-M.W_U_E = M.W_E_E_R / M.PROJECTION_NUM * 1.55
+M.W_U_E = M.W_E_E_R / M.PROJECTION_NUM * 6
 
 M.CUT_IDX_TAU_PAIR = int(2 * M.TAU_STDP_PAIR / S.DT)
 M.KERNEL_PAIR = np.exp(-np.arange(M.CUT_IDX_TAU_PAIR) * S.DT / M.TAU_STDP_PAIR).astype(float)
@@ -216,8 +216,8 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
         
         for d_idx, dropout in enumerate(dropouts):
 
-            e_cell_fr_setpoints = np.ones(m.N_EXC)
-            e_cell_pop_fr_setpoint = 2 * m.PROJECTION_NUM
+            e_cell_fr_setpoints = np.ones(m.N_EXC) * 5
+            e_cell_pop_fr_setpoint = 2 * m.PROJECTION_NUM * 5
 
             sampled_e_cell_rasters = []
             e_cell_sample_idxs = np.sort((np.random.rand(10) * m.N_EXC).astype(int))
@@ -442,8 +442,9 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
                     # E POPULATION-LEVEL FIRING RATE RULE
                     fr_pop_update = e_cell_pop_fr_setpoint - np.sum(spks_for_e_cells)
-                    print(m.ETA * m.GAMMA * fr_pop_update)
-                    fr_pop_step_mean = m.GAMMA * fr_pop_update
+
+                    fr_pop_step_mean = m.GAMMA * (-1 + np.exp(fr_pop_update / 60)) / (1 + np.exp(fr_pop_update / 60))
+                    print('pop_percent_change:', fr_pop_step_mean * m.ETA)
                     fr_pop_step = gaussian((m.N_EXC, m.N_EXC), fr_pop_step_mean, np.abs(fr_pop_step_mean))
 
                     # I SINGLE-CELL FIRING RATE RULE

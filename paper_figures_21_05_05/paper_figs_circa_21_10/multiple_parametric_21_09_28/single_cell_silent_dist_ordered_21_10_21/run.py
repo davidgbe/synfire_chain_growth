@@ -79,8 +79,8 @@ M = Generic(
     I_EXT_B=0,  # additional baseline current input
 
     # Connection probabilities
-    MEAN_N_CONS_PER_CELL=45,
-    SYN_PROP_DIST_EXP=1.7,
+    MEAN_N_CONS_PER_CELL=35,
+    SYN_PROP_DIST_EXP=1.5,
     CON_PROB_FF_CONST=1,
     CON_PROB_R=0.,
     E_I_CON_PROB=0.05,
@@ -148,6 +148,11 @@ def generate_ff_chain(size, unit_size, unit_funcs):
 
 def generate_exc_ff_chain(m): 
 
+    diffs_after_1 = []
+    diffs_after_2 = []
+    synfire_props = []
+    num_cons = []
+
     def ff_unit_func(layer_idx, synfire_proportion):
         w = m.W_E_E_R / m.PROJECTION_NUM
         n_layers = int(m.N_EXC / m.PROJECTION_NUM)
@@ -161,16 +166,25 @@ def generate_exc_ff_chain(m):
 
         gamma = m.MEAN_N_CONS_PER_CELL * synfire_proportion / (m.PROJECTION_NUM * (1 - np.exp(-10/m.CON_PROB_FF_CONST))/(1 - np.exp(-1/m.CON_PROB_FF_CONST)))
 
-        for i, l_idx in enumerate(reversed(range(layer_idx))):
-            cons_for_cell[0, (l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] = gaussian_if_under_val(gamma * M.CON_PROBS_FF[i], (1, m.PROJECTION_NUM), w, 0.3 * w)
+        ### Calculate scaling coef for synapses based on 'synfire_proportion'
+        min_weight_scaling_coef = 0.3
+        weight_scaling_coef = (1 - min_weight_scaling_coef) * synfire_proportion + min_weight_scaling_coef
 
+        for i, l_idx in enumerate(reversed(range(layer_idx))):
+            cons_for_cell[0, (l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] = gaussian_if_under_val(gamma * M.CON_PROBS_FF[i], (1, m.PROJECTION_NUM), weight_scaling_coef * w, 0.2 * w)
+
+        diffs_after_1.append(m.MEAN_N_CONS_PER_CELL * synfire_proportion - np.count_nonzero(cons_for_cell))
         n_rand_cons = m.MEAN_N_CONS_PER_CELL * (1 - synfire_proportion)
 
         if layer_idx > 0:
-            cons_for_cell[0, :(layer_idx * m.PROJECTION_NUM)] += gaussian_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (layer_idx * m.PROJECTION_NUM,), 0.5 * w * (1 - synfire_proportion), 0.3 * w)
+            cons_for_cell[0, :(layer_idx * m.PROJECTION_NUM)] += gaussian_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (layer_idx * m.PROJECTION_NUM,), weight_scaling_coef * w, 0.2 * w)
         if layer_idx < n_layers - 1:
-            cons_for_cell[0, ((layer_idx + 1) * m.PROJECTION_NUM):m.N_EXC] += gaussian_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (m.N_EXC - ((layer_idx + 1) * m.PROJECTION_NUM),), 0.5 * w * (1 - synfire_proportion), 0.3 * w)
+            cons_for_cell[0, ((layer_idx + 1) * m.PROJECTION_NUM):m.N_EXC] += gaussian_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (m.N_EXC - ((layer_idx + 1) * m.PROJECTION_NUM),), weight_scaling_coef * w, 0.2 * w)
 
+        diffs_after_2.append(m.MEAN_N_CONS_PER_CELL - np.count_nonzero(cons_for_cell))
+
+        synfire_props.append(synfire_proportion)
+        num_cons.append(np.count_nonzero(cons_for_cell))
         return cons_for_cell
 
     unit_funcs = []
@@ -180,6 +194,13 @@ def generate_exc_ff_chain(m):
         unit_funcs.append(partial(ff_unit_func, layer_idx=int(i / m.PROJECTION_NUM), synfire_proportion=s_props[i]))
 
     chain = generate_ff_chain(m.N_EXC, m.PROJECTION_NUM, unit_funcs)
+    print(np.mean(diffs_after_1))
+    print(np.mean(diffs_after_2))
+
+    fig_2, ax_2 = plt.subplots(1, 1, figsize=(4, 4), tight_layout=True)
+    ax_2.scatter(synfire_props, num_cons, s=1)
+    fig_2.savefig('num_cons_vs_synfire_prop.png')
+
     chain[chain < 0] = 0
     return chain
 
@@ -415,6 +436,17 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
                 graph_weight_matrix(w_e_e_r_copy, 'w_e_e_r\n', ax=axs[4])
 
+                # dists = []
+                # weights = []
+
+                # for i, j in zip(*(w_e_e_r_copy.nonzero())):
+                #     dists.append(np.abs(i - j))
+                #     weights.append(w_e_e_r_copy[i, j])
+
+                # fig_2, ax_2 = plt.subplots(1, 1, figsize=(4, 4), tight_layout=True)
+                # ax_2.scatter(dists, weights, s=1)
+                # fig_2.savefig('weight_vs_dist.png')
+
                 spks_for_e_cells = rsp.spks[:, :(m.N_EXC + m.N_SILENT)]
                 spks_for_i_cells = rsp.spks[:, (m.N_EXC + m.N_SILENT):(m.N_EXC + m.N_SILENT + m.N_INH)]
                 if surviving_cell_indices is not None:
@@ -428,7 +460,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 axs[1].set_xlabel('Spks per neuron')
                 axs[1].set_ylabel('Frequency')
                 axs[1].set_xlim(-0.5, 30.5)
-                # axs[1].set_ylim(0, m.N_EXC + m.N_SILENT)
 
                 raster = np.stack([rsp.spks_t, rsp.spks_c])
                 inh_raster = raster[:, raster[1, :] > (m.N_EXC + m.N_SILENT)]
