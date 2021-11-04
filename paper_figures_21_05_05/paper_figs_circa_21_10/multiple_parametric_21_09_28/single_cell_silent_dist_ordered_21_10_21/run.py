@@ -33,6 +33,7 @@ parser.add_argument('--fr_single_line_attr', metavar='s', type=int, nargs=1)
 parser.add_argument('--rng_seed', metavar='r', type=int, nargs=1)
 parser.add_argument('--load_mat', metavar='l', type=str, nargs=1)
 parser.add_argument('--dropout_per', metavar='d', type=float, nargs=1)
+parser.add_argument('--synfire_prop_dist', metavar='p', type=float, nargs=1)
 
 
 args = parser.parse_args()
@@ -80,7 +81,7 @@ M = Generic(
 
     # Connection probabilities
     MEAN_N_CONS_PER_CELL=35,
-    SYN_PROP_DIST_EXP=1.1,
+    SYN_PROP_DIST_EXP=args.synfire_prop_dist[0],
     CON_PROB_FF_CONST=1,
     CON_PROB_R=0.,
     E_I_CON_PROB=0.05,
