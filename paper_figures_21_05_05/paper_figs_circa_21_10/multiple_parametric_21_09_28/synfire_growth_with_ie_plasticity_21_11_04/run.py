@@ -104,7 +104,7 @@ M = Generic(
 
     # Synaptic plasticity params
     TAU_STDP_PAIR_EE=30e-3,
-    TAU_STDP_PAIR_EI=3e-3,
+    TAU_STDP_PAIR_EI=2e-3,
 
     SINGLE_CELL_FR_SETPOINT_MIN=6,
     SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
@@ -130,7 +130,7 @@ kernel_base_ei = np.arange(2 * M.CUT_IDX_TAU_PAIR_EI + 1) - M.CUT_IDX_TAU_PAIR_E
 M.KERNEL_PAIR_EI = np.exp(-1 * np.abs(kernel_base_ei) * S.DT / M.TAU_STDP_PAIR_EI).astype(float)
 M.KERNEL_PAIR_EI[M.KERNEL_PAIR_EI >= 1] = 0
 M.KERNEL_PAIR_EI[M.CUT_IDX_TAU_PAIR_EI:] *= -1
-M.KERNEL_PAIR_EI[:M.CUT_IDX_TAU_PAIR_EI] = 0
+# M.KERNEL_PAIR_EI[:M.CUT_IDX_TAU_PAIR_EI] = 0
 
 M.DROPOUT_MAX_IDX = M.N_EXC + M.N_SILENT
 
@@ -437,9 +437,9 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         curr_spks_e = filtered_spks_for_e_cells[i_t, :]
 
                         ## find I spikes for stdp
-                        # stdp_start_ei = i_t - m.CUT_IDX_TAU_PAIR_EI if i_t - m.CUT_IDX_TAU_PAIR_EI > 0 else 0
-                        # stdp_end_ei = i_t + m.CUT_IDX_TAU_PAIR_EI if i_t + m.CUT_IDX_TAU_PAIR_EI < spks_for_e_cells.shape[0] else (spks_for_e_cells.shape[0] - 1)
-                        # stdp_spk_hist_i = spks_for_i_cells[stdp_start_ei:stdp_end_ei, :]
+                        stdp_start_ei = i_t - m.CUT_IDX_TAU_PAIR_EI if i_t - m.CUT_IDX_TAU_PAIR_EI > 0 else 0
+                        stdp_end_ei = i_t + m.CUT_IDX_TAU_PAIR_EI if i_t + m.CUT_IDX_TAU_PAIR_EI < spks_for_e_cells.shape[0] else (spks_for_e_cells.shape[0] - 1)
+                        stdp_spk_hist_i = spks_for_i_cells[stdp_start_ei:stdp_end_ei, :]
 
                         sparse_curr_spks_e = csc_matrix(curr_spks_e)
                         if t_points_for_stdp_ee > 0:
@@ -450,10 +450,10 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                             stdp_burst_pair += stdp_burst_pair_for_t_step
                             stdp_burst_pair -= stdp_burst_pair_for_t_step.T
 
-                        # sparse_spks_i = csc_matrix(np.flip(stdp_spk_hist_i, axis=0))
-                        # trimmed_kernel_ei = m.KERNEL_PAIR_EI[M.CUT_IDX_TAU_PAIR_EI - (i_t - stdp_start_ei):M.CUT_IDX_TAU_PAIR_EI + (stdp_end_ei - i_t)]
-                        # stdp_burst_pair_for_t_step_i = kron(sparse_curr_spks_e, sparse_spks_i).T.dot(trimmed_kernel_ei).reshape(spks_for_e_cells.shape[1], spks_for_i_cells.shape[1])
-                        # stdp_burst_pair_e_i += stdp_burst_pair_for_t_step_i
+                        sparse_spks_i = csc_matrix(np.flip(stdp_spk_hist_i, axis=0))
+                        trimmed_kernel_ei = m.KERNEL_PAIR_EI[M.CUT_IDX_TAU_PAIR_EI - (i_t - stdp_start_ei):M.CUT_IDX_TAU_PAIR_EI + (stdp_end_ei - i_t)]
+                        stdp_burst_pair_for_t_step_i = kron(sparse_curr_spks_e, sparse_spks_i).T.dot(trimmed_kernel_ei).reshape(spks_for_e_cells.shape[1], spks_for_i_cells.shape[1])
+                        stdp_burst_pair_e_i += stdp_burst_pair_for_t_step_i
 
                     # E SINGLE-CELL FIRING RATE RULE
                     fr_update_e = 0
@@ -468,7 +468,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
                     fr_pop_step_mean = m.GAMMA * (-1 + np.exp(fr_pop_update / 60)) / (1 + np.exp(fr_pop_update / 60))
                     print('pop_percent_change:', fr_pop_step_mean * m.ETA)
-                    fr_pop_step = gaussian((m.N_EXC, m.N_EXC), fr_pop_step_mean, np.abs(fr_pop_step_mean))
+                    fr_pop_step = gaussian((m.N_EXC, m.N_EXC), fr_pop_step_mean, 0)
 
                     # I SINGLE-CELL FIRING RATE RULE
                     # fr_update_i = 0
@@ -498,18 +498,18 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)][(w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] < m.W_E_E_R_MIN) & (w_r['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] > 0)] = m.W_E_E_R_MIN
 
                     # output weight bound
-                    cell_outgoing_weight_totals = w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)].sum(axis=0)
-                    rescaling = np.where(cell_outgoing_weight_totals > m.CELL_OUTPUT_MAX, m.CELL_OUTPUT_MAX / cell_outgoing_weight_totals, 1.)
-                    w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] *= rescaling.reshape(1, rescaling.shape[0])
+                    # cell_outgoing_weight_totals = w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)].sum(axis=0)
+                    # rescaling = np.where(cell_outgoing_weight_totals > m.CELL_OUTPUT_MAX, m.CELL_OUTPUT_MAX / cell_outgoing_weight_totals, 1.)
+                    # w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] *= rescaling.reshape(1, rescaling.shape[0])
 
                     w_e_e_hard_bound = m.W_E_E_R_MAX / m.PROJECTION_NUM
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] > w_e_e_hard_bound] = w_e_e_hard_bound 
 
 
                     # print('ei_mean_stdp', np.mean(m.ETA * m.BETA * stdp_burst_pair_e_i))
-                    # w_r_copy['I'][:(m.N_EXC + m.N_SILENT), (m.N_EXC + m.N_SILENT):] += 1e-3 * m.ETA * m.BETA * stdp_burst_pair_e_i
-                    # w_r_copy['I'][w_r_copy['I'] < 0] = 0
-                    # w_r_copy['I'][w_r_copy['I'] > m.W_I_E_R_MAX] = m.W_I_E_R_MAX
+                    w_r_copy['I'][:(m.N_EXC + m.N_SILENT), (m.N_EXC + m.N_SILENT):] += 1e-3 * m.ETA * m.BETA * stdp_burst_pair_e_i
+                    w_r_copy['I'][w_r_copy['I'] < 0] = 0
+                    w_r_copy['I'][w_r_copy['I'] > m.W_I_E_R_MAX] = m.W_I_E_R_MAX
 
                     if i_e % 10 == 0:
                         if i_e < m.DROPOUT_ITER:

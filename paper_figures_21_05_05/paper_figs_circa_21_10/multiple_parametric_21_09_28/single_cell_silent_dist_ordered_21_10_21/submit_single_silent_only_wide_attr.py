@@ -78,7 +78,8 @@ params = OrderedDict()
 params['SEED'] = [str(i) for i in range(2031, 2051)]
 params['ALPHA_1'] = [ str(3e-2) ]
 params['ALPHA_2'] = [ str(0.5e-2) ]
-params['SYN_PROP_DIST'] = [ str(0.9), str(1.1) ]
+params['SYN_PROP_DIST'] = [ str(1.0) ]
+params['DROP_SEV'] = [str(0.35), str(0.5)]
 
 # for key in params.keys():
 # 	if key == 'SEED':
@@ -105,7 +106,7 @@ for src_name in scripts:
 						continue
 
 					augmented_params = {
-						'DROP_SEV': str(drop_sev),
+						# 'DROP_SEV': str(drop_sev),
 					}
 
 					for param_idx, v in enumerate(params.keys()):

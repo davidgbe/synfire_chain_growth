@@ -65,12 +65,12 @@ M = Generic(
     N_EXC=4000,
     N_SILENT=0,
     N_INH=450,
-    M=20,
+    M=25,
     
     # Input params
     DRIVING_HZ=2, # 2 Hz lambda Poisson input to system
-    N_DRIVING_CELLS=20,
-    PROJECTION_NUM=20,
+    N_DRIVING_CELLS=25,
+    PROJECTION_NUM=25,
     INPUT_STD=1e-3,
     BURST_T=1.5e-3,
     INPUT_DELAY=50e-3,
@@ -88,7 +88,7 @@ M = Generic(
     I_E_CON_PROB=0.6,
 
     # Weights
-    W_E_I_R=1.5e-5,
+    W_E_I_R=1.2e-5,
     W_E_I_R_MAX=10e-5,
     W_I_E_R=0.32e-5,
     W_A=0,
@@ -108,7 +108,7 @@ M = Generic(
     TAU_STDP_PAIR=30e-3,
     SINGLE_CELL_FR_SETPOINT_MIN=6,
     SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
-    SINGLE_CELL_LINE_ATTR=bool(args.fr_single_line_attr[0]),
+    SINGLE_CELL_LINE_ATTR=args.fr_single_line_attr[0],
     ETA=0.3,
     ALPHA_1=args.alpha_1[0], #3e-2
     ALPHA_2=args.alpha_2[0],
@@ -121,7 +121,7 @@ np.random.seed(S.RNG_SEED)
 
 M.CON_PROBS_FF = np.exp(-1 * np.arange(M.N_EXC / M.PROJECTION_NUM) / M.CON_PROB_FF_CONST)
 
-M.W_U_E = M.W_E_E_R / M.PROJECTION_NUM * 1.55
+M.W_U_E = M.W_E_E_R / M.PROJECTION_NUM * 1.95
 
 M.CUT_IDX_TAU_PAIR = int(2 * M.TAU_STDP_PAIR / S.DT)
 M.KERNEL_PAIR = np.exp(-np.arange(M.CUT_IDX_TAU_PAIR) * S.DT / M.TAU_STDP_PAIR).astype(float)
@@ -564,17 +564,19 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                             e_cell_fr_setpoints += np.sum(spks_for_e_cells > 0, axis=0)
                     elif i_e == m.E_SINGLE_FR_TRIALS[1]:
                         e_cell_fr_setpoints = e_cell_fr_setpoints / (m.E_SINGLE_FR_TRIALS[1] - m.E_SINGLE_FR_TRIALS[0])
-                        # where_fr_is_0 = (e_cell_fr_setpoints == 0)
-                        # if m.SINGLE_CELL_LINE_ATTR:
-                        #     e_cell_fr_setpoints[where_fr_is_0] = np.random.normal   (
-                        #         loc=m.SINGLE_CELL_FR_SETPOINT_MIN,
-                        #         scale=m.SINGLE_CELL_FR_SETPOINT_MIN_STD,
-                        #         size=e_cell_fr_setpoints[where_fr_is_0].shape[0]
-                        #     )
+                        where_fr_is_0 = (e_cell_fr_setpoints == 0)
+                        if m.SINGLE_CELL_LINE_ATTR == 2:
+                            e_cell_fr_setpoints[where_fr_is_0] = np.random.normal   (
+                                loc=m.SINGLE_CELL_FR_SETPOINT_MIN,
+                                scale=m.SINGLE_CELL_FR_SETPOINT_MIN_STD,
+                                size=e_cell_fr_setpoints[where_fr_is_0].shape[0]
+                            )
                     elif i_e > m.E_SINGLE_FR_TRIALS[1]:
                         e_diffs = e_cell_fr_setpoints - np.sum(spks_for_e_cells > 0, axis=0)
-                        if m.SINGLE_CELL_LINE_ATTR:
+                        if m.SINGLE_CELL_LINE_ATTR == 1:
                             e_diffs[(e_diffs <= 2) & (e_diffs >= -2)] = 0
+                        elif m.SINGLE_CELL_LINE_ATTR == 2:
+                            e_diffs[e_diffs > 0] = 0
                         fr_update_e = e_diffs.reshape(e_diffs.shape[0], 1) * np.ones((m.N_EXC + m.N_SILENT, m.N_EXC + m.N_SILENT)).astype(float)
 
 
