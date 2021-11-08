@@ -116,7 +116,7 @@ M = Generic(
     GAMMA=args.gamma[0], #1e-4,
 )
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.22e-3, T=150e-3, EPOCHS=3000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.22e-3, T=200e-3, EPOCHS=3000)
 np.random.seed(S.RNG_SEED)
 
 M.CON_PROBS_FF = np.exp(-1 * np.arange(M.N_EXC / M.PROJECTION_NUM) / M.CON_PROB_FF_CONST)
@@ -130,7 +130,7 @@ kernel_base_ei = np.arange(2 * M.CUT_IDX_TAU_PAIR_EI + 1) - M.CUT_IDX_TAU_PAIR_E
 M.KERNEL_PAIR_EI = np.exp(-1 * np.abs(kernel_base_ei) * S.DT / M.TAU_STDP_PAIR_EI).astype(float)
 M.KERNEL_PAIR_EI[M.KERNEL_PAIR_EI >= 1] = 0
 M.KERNEL_PAIR_EI[M.CUT_IDX_TAU_PAIR_EI:] *= -1
-# M.KERNEL_PAIR_EI[:M.CUT_IDX_TAU_PAIR_EI] = 0
+M.KERNEL_PAIR_EI *= 0
 
 M.DROPOUT_MAX_IDX = M.N_EXC + M.N_SILENT
 
@@ -171,8 +171,8 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
     if w_r_e is None:
         w_e_e_r = np.random.rand(m.N_EXC, m.N_EXC)
-        w_e_e_r[w_e_e_r > 0.3] = 0
-        w_e_e_r *= (m.W_E_E_R * 0.03 / 0.3)
+        w_e_e_r[w_e_e_r > 0.6] = 0
+        w_e_e_r *= (m.W_E_E_R * 0.02 / 0.6)
         np.fill_diagonal(w_e_e_r, 0.)
 
         connectivity = np.where(w_e_e_r > 0, 1, 0)
@@ -381,7 +381,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 axs[0].scatter(inh_raster[0, :] * 1000, inh_raster[1, :], s=1, c='red', zorder=0, alpha=1)
 
                 axs[0].set_ylim(-1, m.N_EXC + m.N_INH)
-                axs[0].set_xlim(m.INPUT_DELAY * 1000, 100)
+                axs[0].set_xlim(m.INPUT_DELAY * 1000, 150)
                 axs[0].set_ylabel('Cell Index')
                 axs[0].set_xlabel('Time (ms)')
 
@@ -403,7 +403,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     })
                 else:
                     if i_e % 80 == 0:
-                        e_cell_pop_fr_setpoint += m.PROJECTION_NUM
+                        e_cell_pop_fr_setpoint += m.PROJECTION_NUM * 5
 
                     # filter e cell spks for start of bursts
                     def burst_kernel(spks):
@@ -507,7 +507,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
 
                     # print('ei_mean_stdp', np.mean(m.ETA * m.BETA * stdp_burst_pair_e_i))
-                    w_r_copy['I'][:(m.N_EXC + m.N_SILENT), (m.N_EXC + m.N_SILENT):] += 1e-3 * m.ETA * m.BETA * stdp_burst_pair_e_i
+                    w_r_copy['I'][:(m.N_EXC + m.N_SILENT), (m.N_EXC + m.N_SILENT):] += 1e-4 * m.ETA * m.BETA * stdp_burst_pair_e_i
                     w_r_copy['I'][w_r_copy['I'] < 0] = 0
                     w_r_copy['I'][w_r_copy['I'] > m.W_I_E_R_MAX] = m.W_I_E_R_MAX
 
