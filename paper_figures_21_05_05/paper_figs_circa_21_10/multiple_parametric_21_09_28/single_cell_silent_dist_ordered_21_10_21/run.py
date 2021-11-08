@@ -437,17 +437,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
                 graph_weight_matrix(w_e_e_r_copy, 'w_e_e_r\n', ax=axs[4])
 
-                # dists = []
-                # weights = []
-
-                # for i, j in zip(*(w_e_e_r_copy.nonzero())):
-                #     dists.append(np.abs(i - j))
-                #     weights.append(w_e_e_r_copy[i, j])
-
-                # fig_2, ax_2 = plt.subplots(1, 1, figsize=(4, 4), tight_layout=True)
-                # ax_2.scatter(dists, weights, s=1)
-                # fig_2.savefig('weight_vs_dist.png')
-
                 spks_for_e_cells = rsp.spks[:, :(m.N_EXC + m.N_SILENT)]
                 spks_for_i_cells = rsp.spks[:, (m.N_EXC + m.N_SILENT):(m.N_EXC + m.N_SILENT + m.N_INH)]
                 if surviving_cell_indices is not None:
@@ -496,6 +485,17 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 for i in range(len(axs)):
                     set_font_size(axs[i], 14)
                 fig.savefig(f'{output_dir}/{d_idx}_{zero_pad(i_e, 4)}.png')
+
+                dists = []
+                weights = []
+
+                for i, j in zip(*(w_e_e_r_copy.nonzero())):
+                    dists.append(np.abs(i - j))
+                    weights.append(w_e_e_r_copy[i, j])
+
+                fig_2, ax_2 = plt.subplots(1, 1, figsize=(4, 4), tight_layout=True)
+                ax_2.scatter(dists, weights, s=1)
+                fig_2.savefig('weight_vs_dist.png')
 
                 first_spk_times = process_single_activation(exc_raster, m)
 

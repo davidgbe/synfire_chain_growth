@@ -6,6 +6,7 @@ import numpy as np
 from scipy.sparse import csc_matrix, csr_matrix, kron
 import scipy.io as sio
 import os
+from time import time
 
 from utils.general import zero_pad
 from aux import Generic, c_tile, r_tile, dropout_on_mat
@@ -214,10 +215,15 @@ class LIFNtwkG(object):
             v={int(round(t_/dt)): f_v for t_, f_v in tmp_v},
             spk={int(round(t_/dt)): f_spk for t_, f_spk in tmp_spk})
 
-        avg_initial_input_per_cell = np.mean(self.w_r['E'][:m.N_EXC, :m.N_EXC].sum(axis=1))
+        pairwise_spk_delays = np.block([
+            [20 * np.ones((m.N_EXC, m.N_EXC)), np.ones((m.N_EXC, m.N_INH))],
+            [np.ones((m.N_INH, m.N_EXC)), np.ones((m.N_INH, m.N_INH))],
+        ]).astype(int)
+
+        k = np.concatenate([np.arange(n) for i in range(n)]).astype(int)
         
         # loop over timesteps
-        for t_ctr in range(len(i_ext) - 4 * t_r_int[0]):
+        for t_ctr in range(len(i_ext)):
 
             if self.output and (t_ctr == 0):
                 sio.savemat(output_dir + '/' + f'{zero_pad(0, 6)}', {
@@ -259,7 +265,13 @@ class LIFNtwkG(object):
                     g = gs[syn][t_ctr-1, :]
                     # get weighted spike inputs
                     ## recurrent
-                    inp = w_r[syn].dot(spks[t_ctr-1, :])
+                    spk_emit_times = t_ctr - pairwise_spk_delays
+                    spk_emit_times[spk_emit_times < 0] = t_ctr
+                    trimmed_spks = csr_matrix(spks[spk_emit_times.min():, :])            
+                    x = trimmed_spks[(spk_emit_times.flatten() - spk_emit_times.min()), k]
+                    z = x.reshape(n, n)
+                    inp = (w_r[syn].multiply(z)).sum(axis=1).reshape(n)
+
                     ## upstream
                     if spks_u is not None:
                         if syn in w_u:

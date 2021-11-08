@@ -44,11 +44,11 @@ print(args)
 M = Generic(
     # Excitatory membrane
     C_M_E=1e-6,  # membrane capacitance
-    G_L_E=.4e-3,  # membrane leak conductance (T_M (s) = C_M (F/cm^2) / G_L (S/cm^2))
-    E_L_E=-.067,  # membrane leak potential (V)
+    G_L_E=.25e-3,  # membrane leak conductance (T_M (s) = C_M (F/cm^2) / G_L (S/cm^2))
+    E_L_E=-.07,  # membrane leak potential (V)
     V_TH_E=-.043,  # membrane spike threshold (V)
     T_R_E=1e-3,  # refractory period (s)
-    E_R_E=-0.067, # reset voltage (V)
+    E_R_E=-0.065, # reset voltage (V)
     
     # Inhibitory membrane
     C_M_I=1e-6,
@@ -56,7 +56,7 @@ M = Generic(
     E_L_I=-.057,
     V_TH_I=-.043,
     T_R_I=0.25e-3,
-    E_R_I=-.057, # reset voltage (V)
+    E_R_I=-.055, # reset voltage (V)
     
     # syn rev potentials and decay times
     E_E=0, E_I=-.09, E_A=-.07, T_E=.004, T_I=.004, T_A=.006,
@@ -83,17 +83,19 @@ M = Generic(
     SYN_PROP_DIST_EXP=1.7,
     CON_PROB_FF_CONST=1,
     CON_PROB_R=0.,
-    E_I_CON_PROB=0.25,
+    E_I_CON_PROB=0.1,
     I_E_CON_PROB=0.6,
 
     # Weights
-    W_E_I_R=2.5e-5,
+    W_E_I_R=5e-5,
     W_E_I_R_MAX=10e-5,
-    W_I_E_R=0.9e-5,
+    W_I_E_R=1.5e-5,
+    W_I_E_R_MAX=3e-5,
     W_A=0,
     W_E_E_R=0.26 * 0.004 * 1.3,
+    W_E_E_R_MIN=1e-6,
     W_E_E_R_MAX=0.26 * 0.004 * 1.3 * 5,
-    CELL_OUTPUT_MAX=0.26 * 0.004 * 1.3 * 2,
+    CELL_OUTPUT_MAX=0.26 * 0.004 * 1.3 * 3,
 
     # Dropout params
     DROPOUT_MIN_IDX=0,
@@ -101,7 +103,9 @@ M = Generic(
     DROPOUT_SEV=0,
 
     # Synaptic plasticity params
-    TAU_STDP_PAIR=30e-3,
+    TAU_STDP_PAIR_EE=30e-3,
+    TAU_STDP_PAIR_EI=3e-3,
+
     SINGLE_CELL_FR_SETPOINT_MIN=6,
     SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
     SINGLE_CELL_LINE_ATTR=bool(args.fr_single_line_attr[0]),
@@ -119,8 +123,14 @@ M.CON_PROBS_FF = np.exp(-1 * np.arange(M.N_EXC / M.PROJECTION_NUM) / M.CON_PROB_
 
 M.W_U_E = M.W_E_E_R / M.PROJECTION_NUM * 6
 
-M.CUT_IDX_TAU_PAIR = int(2 * M.TAU_STDP_PAIR / S.DT)
-M.KERNEL_PAIR = np.exp(-np.arange(M.CUT_IDX_TAU_PAIR) * S.DT / M.TAU_STDP_PAIR).astype(float)
+M.CUT_IDX_TAU_PAIR_EE = int(2 * M.TAU_STDP_PAIR_EE / S.DT)
+M.KERNEL_PAIR_EE = np.exp(-np.arange(M.CUT_IDX_TAU_PAIR_EE) * S.DT / M.TAU_STDP_PAIR_EE).astype(float)
+M.CUT_IDX_TAU_PAIR_EI = int(2 * M.TAU_STDP_PAIR_EI / S.DT)
+kernel_base_ei = np.arange(2 * M.CUT_IDX_TAU_PAIR_EI + 1) - M.CUT_IDX_TAU_PAIR_EI
+M.KERNEL_PAIR_EI = np.exp(-1 * np.abs(kernel_base_ei) * S.DT / M.TAU_STDP_PAIR_EI).astype(float)
+M.KERNEL_PAIR_EI[M.KERNEL_PAIR_EI >= 1] = 0
+M.KERNEL_PAIR_EI[M.CUT_IDX_TAU_PAIR_EI:] *= -1
+M.KERNEL_PAIR_EI[:M.CUT_IDX_TAU_PAIR_EI] = 0
 
 M.DROPOUT_MAX_IDX = M.N_EXC + M.N_SILENT
 
@@ -262,6 +272,9 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     except IndexError as e:
                         pass
 
+                uva_spks_base = np.random.poisson(lam=20 * S.DT, size=len(t))
+                spks_u[:, -m.N_INH:] = np.stack([uva_spks_base for i in range(m.N_INH)]).T
+
                 ntwk = LIFNtwkG(
                     c_m=c_m,
                     g_l=g_l,
@@ -324,9 +337,9 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     fig.savefig(f'{sampled_cell_output_dir}/sampled_cell_rasters_{int(i_e / sampled_trial_number)}.png')
 
                 scale = 0.8
-                gs = gridspec.GridSpec(7, 1)
+                gs = gridspec.GridSpec(9, 1)
                 fig = plt.figure(figsize=(9 * scale, 23 * scale), tight_layout=True)
-                axs = [fig.add_subplot(gs[:2]), fig.add_subplot(gs[2]), fig.add_subplot(gs[3]), fig.add_subplot(gs[4]), fig.add_subplot(gs[5:])]
+                axs = [fig.add_subplot(gs[:2]), fig.add_subplot(gs[2]), fig.add_subplot(gs[3]), fig.add_subplot(gs[4]), fig.add_subplot(gs[5:7]), fig.add_subplot(gs[7:])]
 
                 w_e_e_r_copy = w_r_copy['E'][:m.N_EXC, :m.N_EXC]
 
@@ -342,6 +355,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 axs[3].set_ylabel('Counts')
 
                 graph_weight_matrix(w_e_e_r_copy, 'w_e_e_r\n', ax=axs[4], v_max=m.W_E_E_R * .25)
+                graph_weight_matrix(w_r_copy['I'][:(m.N_EXC + m.N_SILENT), (m.N_EXC + m.N_SILENT):], 'w_i_e_r\n', ax=axs[5], v_max=m.W_E_I_R_MAX * 0.5)
 
                 spks_for_e_cells = rsp.spks[:, :(m.N_EXC + m.N_SILENT)]
                 spks_for_i_cells = rsp.spks[:, (m.N_EXC + m.N_SILENT):(m.N_EXC + m.N_SILENT + m.N_INH)]
@@ -388,7 +402,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         'inh_raster': inh_raster,
                     })
                 else:
-                    if i_e % 100 == 0:
+                    if i_e % 80 == 0:
                         e_cell_pop_fr_setpoint += m.PROJECTION_NUM
 
                     # filter e cell spks for start of bursts
@@ -414,28 +428,32 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     stdp_burst_pair_e_i = 0
 
                     for i_t in range(spks_for_e_cells.shape[0]):
-                        stdp_start = i_t - m.CUT_IDX_TAU_PAIR if i_t - m.CUT_IDX_TAU_PAIR > 0 else 0
+                        ## find E spikes for stdp
+                        stdp_start_ee = i_t - m.CUT_IDX_TAU_PAIR_EE if i_t - m.CUT_IDX_TAU_PAIR_EE > 0 else 0
+                        stdp_spk_hist = filtered_spks_for_e_cells[stdp_start_ee:i_t, :]
+                        t_points_for_stdp_ee = stdp_spk_hist.shape[0]
 
-                        stdp_spk_hist = filtered_spks_for_e_cells[stdp_start:i_t, :]
-                        t_points_for_stdp = stdp_spk_hist.shape[0]
+                        # find E spikes at current time
+                        curr_spks_e = filtered_spks_for_e_cells[i_t, :]
 
-                        curr_spks = filtered_spks_for_e_cells[i_t, :]
+                        ## find I spikes for stdp
+                        # stdp_start_ei = i_t - m.CUT_IDX_TAU_PAIR_EI if i_t - m.CUT_IDX_TAU_PAIR_EI > 0 else 0
+                        # stdp_end_ei = i_t + m.CUT_IDX_TAU_PAIR_EI if i_t + m.CUT_IDX_TAU_PAIR_EI < spks_for_e_cells.shape[0] else (spks_for_e_cells.shape[0] - 1)
+                        # stdp_spk_hist_i = spks_for_i_cells[stdp_start_ei:stdp_end_ei, :]
 
-                        stdp_spk_hist_i = spks_for_i_cells[stdp_start:i_t, :]
-
-                        if t_points_for_stdp > 0:
-                            sparse_curr_spks = csc_matrix(curr_spks)
+                        sparse_curr_spks_e = csc_matrix(curr_spks_e)
+                        if t_points_for_stdp_ee > 0:
                             sparse_spks_e = csc_matrix(np.flip(stdp_spk_hist, axis=0))
 
                             # compute sparse pairwise correlations with curr_spks and spikes in stdp pairwise time window & dot into pairwise kernel
-                            stdp_burst_pair_for_t_step = kron(curr_spks, sparse_spks_e).T.dot(m.KERNEL_PAIR[:t_points_for_stdp]).reshape(spks_for_e_cells.shape[1], spks_for_e_cells.shape[1])
+                            stdp_burst_pair_for_t_step = kron(sparse_curr_spks_e, sparse_spks_e).T.dot(m.KERNEL_PAIR_EE[:t_points_for_stdp_ee]).reshape(spks_for_e_cells.shape[1], spks_for_e_cells.shape[1])
                             stdp_burst_pair += stdp_burst_pair_for_t_step
                             stdp_burst_pair -= stdp_burst_pair_for_t_step.T
 
-                            sparse_spks_i = csc_matrix(np.flip(stdp_spk_hist_i, axis=0))
-                            stdp_burst_pair_for_t_step_i = -1 * kron(curr_spks, sparse_spks_i).T.dot(m.KERNEL_PAIR[:t_points_for_stdp]).reshape(spks_for_e_cells.shape[1], spks_for_i_cells.shape[1])
-                            stdp_burst_pair_e_i += stdp_burst_pair_for_t_step_i
-                    print(np.mean(stdp_burst_pair_e_i))
+                        # sparse_spks_i = csc_matrix(np.flip(stdp_spk_hist_i, axis=0))
+                        # trimmed_kernel_ei = m.KERNEL_PAIR_EI[M.CUT_IDX_TAU_PAIR_EI - (i_t - stdp_start_ei):M.CUT_IDX_TAU_PAIR_EI + (stdp_end_ei - i_t)]
+                        # stdp_burst_pair_for_t_step_i = kron(sparse_curr_spks_e, sparse_spks_i).T.dot(trimmed_kernel_ei).reshape(spks_for_e_cells.shape[1], spks_for_i_cells.shape[1])
+                        # stdp_burst_pair_e_i += stdp_burst_pair_for_t_step_i
 
                     # E SINGLE-CELL FIRING RATE RULE
                     fr_update_e = 0
@@ -477,7 +495,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
 
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] += (e_total_potentiation * w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)])
-                    w_r_copy['E'][w_r_copy['E'] < 0] = 0
+                    w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)][(w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] < m.W_E_E_R_MIN) & (w_r['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] > 0)] = m.W_E_E_R_MIN
 
                     # output weight bound
                     cell_outgoing_weight_totals = w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)].sum(axis=0)
@@ -487,8 +505,11 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     w_e_e_hard_bound = m.W_E_E_R_MAX / m.PROJECTION_NUM
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] > w_e_e_hard_bound] = w_e_e_hard_bound 
 
-                    w_r_copy['I'][:(m.N_EXC + m.N_SILENT), (m.N_EXC + m.N_SILENT):] += m.ETA * m.BETA * stdp_burst_pair_e_i
-                    w_r_copy['I'][w_r_copy['I'] < 0] = 0
+
+                    # print('ei_mean_stdp', np.mean(m.ETA * m.BETA * stdp_burst_pair_e_i))
+                    # w_r_copy['I'][:(m.N_EXC + m.N_SILENT), (m.N_EXC + m.N_SILENT):] += 1e-3 * m.ETA * m.BETA * stdp_burst_pair_e_i
+                    # w_r_copy['I'][w_r_copy['I'] < 0] = 0
+                    # w_r_copy['I'][w_r_copy['I'] > m.W_I_E_R_MAX] = m.W_I_E_R_MAX
 
                     if i_e % 10 == 0:
                         if i_e < m.DROPOUT_ITER:
