@@ -116,7 +116,7 @@ M = Generic(
     GAMMA=args.gamma[0], #1e-4,
 )
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.22e-3, T=200e-3, EPOCHS=3000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.22e-3, T=400e-3, EPOCHS=3000)
 np.random.seed(S.RNG_SEED)
 
 M.CON_PROBS_FF = np.exp(-1 * np.arange(M.N_EXC / M.PROJECTION_NUM) / M.CON_PROB_FF_CONST)
@@ -373,7 +373,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
                 spk_bins_i, freqs_i = bin_occurrences(spks_for_i_cells.sum(axis=0), max_val=800, bin_size=1)
 
-                axs[1].bar(spk_bins_i, freqs_i, color='black', alpha=0.5)
+                axs[1].bar(spk_bins_i, freqs_i, color='black', alpha=0.5, zorder=-1)
 
 
                 exc_raster = raster[:, raster[1, :] < (m.N_EXC + m.N_SILENT)]
@@ -381,7 +381,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 axs[0].scatter(inh_raster[0, :] * 1000, inh_raster[1, :], s=1, c='red', zorder=0, alpha=1)
 
                 axs[0].set_ylim(-1, m.N_EXC + m.N_INH)
-                axs[0].set_xlim(m.INPUT_DELAY * 1000, 150)
+                axs[0].set_xlim(m.INPUT_DELAY * 1000, 350)
                 axs[0].set_ylabel('Cell Index')
                 axs[0].set_xlabel('Time (ms)')
 
@@ -437,9 +437,9 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         curr_spks_e = filtered_spks_for_e_cells[i_t, :]
 
                         ## find I spikes for stdp
-                        stdp_start_ei = i_t - m.CUT_IDX_TAU_PAIR_EI if i_t - m.CUT_IDX_TAU_PAIR_EI > 0 else 0
-                        stdp_end_ei = i_t + m.CUT_IDX_TAU_PAIR_EI if i_t + m.CUT_IDX_TAU_PAIR_EI < spks_for_e_cells.shape[0] else (spks_for_e_cells.shape[0] - 1)
-                        stdp_spk_hist_i = spks_for_i_cells[stdp_start_ei:stdp_end_ei, :]
+                        # stdp_start_ei = i_t - m.CUT_IDX_TAU_PAIR_EI if i_t - m.CUT_IDX_TAU_PAIR_EI > 0 else 0
+                        # stdp_end_ei = i_t + m.CUT_IDX_TAU_PAIR_EI if i_t + m.CUT_IDX_TAU_PAIR_EI < spks_for_e_cells.shape[0] else (spks_for_e_cells.shape[0] - 1)
+                        # stdp_spk_hist_i = spks_for_i_cells[stdp_start_ei:stdp_end_ei, :]
 
                         sparse_curr_spks_e = csc_matrix(curr_spks_e)
                         if t_points_for_stdp_ee > 0:
@@ -450,10 +450,10 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                             stdp_burst_pair += stdp_burst_pair_for_t_step
                             stdp_burst_pair -= stdp_burst_pair_for_t_step.T
 
-                        sparse_spks_i = csc_matrix(np.flip(stdp_spk_hist_i, axis=0))
-                        trimmed_kernel_ei = m.KERNEL_PAIR_EI[M.CUT_IDX_TAU_PAIR_EI - (i_t - stdp_start_ei):M.CUT_IDX_TAU_PAIR_EI + (stdp_end_ei - i_t)]
-                        stdp_burst_pair_for_t_step_i = kron(sparse_curr_spks_e, sparse_spks_i).T.dot(trimmed_kernel_ei).reshape(spks_for_e_cells.shape[1], spks_for_i_cells.shape[1])
-                        stdp_burst_pair_e_i += stdp_burst_pair_for_t_step_i
+                        # sparse_spks_i = csc_matrix(np.flip(stdp_spk_hist_i, axis=0))
+                        # trimmed_kernel_ei = m.KERNEL_PAIR_EI[M.CUT_IDX_TAU_PAIR_EI - (i_t - stdp_start_ei):M.CUT_IDX_TAU_PAIR_EI + (stdp_end_ei - i_t)]
+                        # stdp_burst_pair_for_t_step_i = kron(sparse_curr_spks_e, sparse_spks_i).T.dot(trimmed_kernel_ei).reshape(spks_for_e_cells.shape[1], spks_for_i_cells.shape[1])
+                        # stdp_burst_pair_e_i += stdp_burst_pair_for_t_step_i
 
                     # E SINGLE-CELL FIRING RATE RULE
                     fr_update_e = 0
@@ -498,18 +498,18 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)][(w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] < m.W_E_E_R_MIN) & (w_r['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] > 0)] = m.W_E_E_R_MIN
 
                     # output weight bound
-                    # cell_outgoing_weight_totals = w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)].sum(axis=0)
-                    # rescaling = np.where(cell_outgoing_weight_totals > m.CELL_OUTPUT_MAX, m.CELL_OUTPUT_MAX / cell_outgoing_weight_totals, 1.)
-                    # w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] *= rescaling.reshape(1, rescaling.shape[0])
+                    cell_outgoing_weight_totals = w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)].sum(axis=0)
+                    rescaling = np.where(cell_outgoing_weight_totals > m.CELL_OUTPUT_MAX, m.CELL_OUTPUT_MAX / cell_outgoing_weight_totals, 1.)
+                    w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] *= rescaling.reshape(1, rescaling.shape[0])
 
                     w_e_e_hard_bound = m.W_E_E_R_MAX / m.PROJECTION_NUM
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] > w_e_e_hard_bound] = w_e_e_hard_bound 
 
 
                     # print('ei_mean_stdp', np.mean(m.ETA * m.BETA * stdp_burst_pair_e_i))
-                    w_r_copy['I'][:(m.N_EXC + m.N_SILENT), (m.N_EXC + m.N_SILENT):] += 1e-4 * m.ETA * m.BETA * stdp_burst_pair_e_i
-                    w_r_copy['I'][w_r_copy['I'] < 0] = 0
-                    w_r_copy['I'][w_r_copy['I'] > m.W_I_E_R_MAX] = m.W_I_E_R_MAX
+                    # w_r_copy['I'][:(m.N_EXC + m.N_SILENT), (m.N_EXC + m.N_SILENT):] += 1e-4 * m.ETA * m.BETA * stdp_burst_pair_e_i
+                    # w_r_copy['I'][w_r_copy['I'] < 0] = 0
+                    # w_r_copy['I'][w_r_copy['I'] > m.W_I_E_R_MAX] = m.W_I_E_R_MAX
 
                     if i_e % 10 == 0:
                         if i_e < m.DROPOUT_ITER:
