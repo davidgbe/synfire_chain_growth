@@ -12,4 +12,4 @@
 **/parsed_data*
 **/sampled_cell_rasters/*
 **/*.png
-
+**/core.*
