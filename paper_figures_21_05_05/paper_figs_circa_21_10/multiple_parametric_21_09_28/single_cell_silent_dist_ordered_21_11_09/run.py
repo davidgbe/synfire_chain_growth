@@ -106,7 +106,7 @@ M = Generic(
 
     # Synaptic plasticity params
     TAU_STDP_PAIR=30e-3,
-    SINGLE_CELL_FR_SETPOINT_MIN=6,
+    SINGLE_CELL_FR_SETPOINT_MIN=10,
     SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
     SINGLE_CELL_LINE_ATTR=args.fr_single_line_attr[0],
     ETA=0.3,
@@ -121,7 +121,7 @@ np.random.seed(S.RNG_SEED)
 
 M.CON_PROBS_FF = np.exp(-1 * np.arange(M.N_EXC / M.PROJECTION_NUM) / M.CON_PROB_FF_CONST)
 
-M.W_U_E = M.W_E_E_R / M.PROJECTION_NUM * 1.95
+M.W_U_E = M.W_E_E_R / M.PROJECTION_NUM * 3
 
 M.CUT_IDX_TAU_PAIR = int(2 * M.TAU_STDP_PAIR / S.DT)
 M.KERNEL_PAIR = np.exp(-np.arange(M.CUT_IDX_TAU_PAIR) * S.DT / M.TAU_STDP_PAIR).astype(float)
