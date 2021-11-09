@@ -11,4 +11,5 @@
 **/*[0-9].slurm
 **/parsed_data*
 **/sampled_cell_rasters/*
+**/*.png
 

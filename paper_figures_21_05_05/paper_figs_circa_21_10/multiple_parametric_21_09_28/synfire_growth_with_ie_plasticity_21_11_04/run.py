@@ -227,6 +227,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
         for d_idx, dropout in enumerate(dropouts):
 
             e_cell_fr_setpoints = np.ones(m.N_EXC) * 5
+            e_cell_fr_setpoints[:m.PROJECTION_NUM] = 2
             e_cell_pop_fr_setpoint = 2 * m.PROJECTION_NUM * 5
 
             sampled_e_cell_rasters = []
