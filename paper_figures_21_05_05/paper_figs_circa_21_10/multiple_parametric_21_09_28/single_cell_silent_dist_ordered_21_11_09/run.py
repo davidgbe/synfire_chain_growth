@@ -14,6 +14,7 @@ from scipy.sparse import csc_matrix, csr_matrix, kron
 from functools import reduce, partial
 import argparse
 import time
+import tracemalloc
 
 from aux import *
 from disp import *
@@ -80,7 +81,7 @@ M = Generic(
     I_EXT_B=0,  # additional baseline current input
 
     # Connection probabilities
-    MEAN_N_CONS_PER_CELL=35,
+    MEAN_N_CONS_PER_CELL=40,
     SYN_PROP_DIST_EXP=args.synfire_prop_dist[0],
     CON_PROB_FF_CONST=1,
     CON_PROB_R=0.,
@@ -92,8 +93,8 @@ M = Generic(
     W_E_I_R_MAX=10e-5,
     W_I_E_R=0.32e-5,
     W_A=0,
-    W_E_E_R=0.26 * 0.004 * 1.3,
-    W_E_E_R_MAX=0.26 * 0.004 * 10 * 1.3,
+    W_E_E_R=0.26 * 0.004 * 1.0,
+    W_E_E_R_MAX=0.26 * 0.004 * 10 * 1.0,
 
     # Dropout params
     DROPOUT_MIN_IDX=0,
@@ -109,6 +110,7 @@ M = Generic(
     SINGLE_CELL_FR_SETPOINT_MIN=10,
     SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
     SINGLE_CELL_LINE_ATTR=args.fr_single_line_attr[0],
+    SINGLE_CELL_LINE_ATTR_WIDTH=6,
     ETA=0.3,
     ALPHA_1=args.alpha_1[0], #3e-2
     ALPHA_2=args.alpha_2[0],
@@ -121,7 +123,7 @@ np.random.seed(S.RNG_SEED)
 
 M.CON_PROBS_FF = np.exp(-1 * np.arange(M.N_EXC / M.PROJECTION_NUM) / M.CON_PROB_FF_CONST)
 
-M.W_U_E = M.W_E_E_R / M.PROJECTION_NUM * 3
+M.W_U_E = M.W_E_E_R / M.PROJECTION_NUM * 3.5
 
 M.CUT_IDX_TAU_PAIR = int(2 * M.TAU_STDP_PAIR / S.DT)
 M.KERNEL_PAIR = np.exp(-np.arange(M.CUT_IDX_TAU_PAIR) * S.DT / M.TAU_STDP_PAIR).astype(float)
@@ -168,8 +170,11 @@ def generate_exc_ff_chain(m):
         gamma = m.MEAN_N_CONS_PER_CELL * synfire_proportion / (m.PROJECTION_NUM * (1 - np.exp(-10/m.CON_PROB_FF_CONST))/(1 - np.exp(-1/m.CON_PROB_FF_CONST)))
 
         ### Calculate scaling coef for synapses based on 'synfire_proportion'
-        min_weight_scaling_coef = 0.3
+        min_weight_scaling_coef = 0.05
         weight_scaling_coef = (1 - min_weight_scaling_coef) * synfire_proportion + min_weight_scaling_coef
+
+        # if synfire_proportion > 0.98:
+        #     print(synfire_proportion, gamma * M.CON_PROBS_FF[0])
 
         for i, l_idx in enumerate(reversed(range(layer_idx))):
             cons_for_cell[0, (l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] = gaussian_if_under_val(gamma * M.CON_PROBS_FF[i], (1, m.PROJECTION_NUM), weight_scaling_coef * w, 0.2 * w)
@@ -255,7 +260,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
         np.fill_diagonal(w_e_e_r, 0.)
 
-        min_weight_scaling_coef = 0.3
+        min_weight_scaling_coef = 0.05
         weight_scaling_coefs = (1 - min_weight_scaling_coef) * syn_props + min_weight_scaling_coef
 
         e_i_r = np.stack([gaussian_if_under_val(m.E_I_CON_PROB, (m.N_INH,), w_scale * m.W_E_I_R, 0.2 * m.W_E_I_R) for w_scale in weight_scaling_coefs]).T
@@ -302,8 +307,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
     # run simulation for same set of parameters
     for rp_idx in range(repeats):
         show_trial = (type(n_show_only) is int and rp_idx < n_show_only)
-
-        rsps_for_trial = []
         
         for d_idx, dropout in enumerate(dropouts):
 
@@ -319,6 +322,11 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
             i_cell_sample_idxs = np.sort((np.random.rand(10) * m.N_INH + m.N_EXC).astype(int))
 
             w_r_copy = copy(w_r)
+
+            # tracemalloc.start()
+
+            # snapshot = None
+            # last_snapshot = tracemalloc.take_snapshot()
 
             for i_e in range(epochs):
 
@@ -400,8 +408,8 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 # ax.plot(b, f/2, color='black', lw=2)
                 # fig.savefig('inh_volt_dists.png')
 
-                sampled_e_cell_rasters.append(rsp.spks[int((m.INPUT_DELAY + 20e-3)/S.DT):, e_cell_sample_idxs])
-                sampled_i_cell_rasters.append(rsp.spks[int((m.INPUT_DELAY + 20e-3)/S.DT):, i_cell_sample_idxs])
+                sampled_e_cell_rasters.append(rsp.spks[int((m.INPUT_DELAY)/S.DT):, e_cell_sample_idxs])
+                sampled_i_cell_rasters.append(rsp.spks[int((m.INPUT_DELAY)/S.DT):, i_cell_sample_idxs])
 
                 sampled_trial_number = 10
                 if i_e % sampled_trial_number == 0 and i_e != 0:
@@ -567,6 +575,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                             e_cell_fr_setpoints += np.sum(spks_for_e_cells > 0, axis=0)
                     elif i_e == m.E_SINGLE_FR_TRIALS[1]:
                         e_cell_fr_setpoints = e_cell_fr_setpoints / (m.E_SINGLE_FR_TRIALS[1] - m.E_SINGLE_FR_TRIALS[0])
+                        e_cell_fr_setpoints[e_cell_fr_setpoints < (m.SINGLE_CELL_LINE_ATTR_WIDTH/2) ] = m.SINGLE_CELL_LINE_ATTR_WIDTH/2
                         where_fr_is_0 = (e_cell_fr_setpoints == 0)
                         if m.SINGLE_CELL_LINE_ATTR == 2:
                             e_cell_fr_setpoints[where_fr_is_0] = np.random.normal   (
@@ -577,7 +586,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     elif i_e > m.E_SINGLE_FR_TRIALS[1]:
                         e_diffs = e_cell_fr_setpoints - np.sum(spks_for_e_cells > 0, axis=0)
                         if m.SINGLE_CELL_LINE_ATTR == 1:
-                            e_diffs[(e_diffs <= 2) & (e_diffs >= -2)] = 0
+                            e_diffs[(e_diffs <= (m.SINGLE_CELL_LINE_ATTR_WIDTH/2)) & (e_diffs >= (-1 * m.SINGLE_CELL_LINE_ATTR_WIDTH/2))] = 0
                         elif m.SINGLE_CELL_LINE_ATTR == 2:
                             e_diffs[e_diffs > 0] = 0
                         fr_update_e = e_diffs.reshape(e_diffs.shape[0], 1) * np.ones((m.N_EXC + m.N_SILENT, m.N_EXC + m.N_SILENT)).astype(float)
@@ -698,6 +707,15 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 secs_per_cycle = f'{end - start}'
                 secs_per_cycle = secs_per_cycle[:secs_per_cycle.find('.') + 2]
                 print(f'{secs_per_cycle} s')
+
+                plt.close('all')
+
+                # snapshot = tracemalloc.take_snapshot()
+                # if last_snapshot is not None:
+                #     top_stats = snapshot.compare_to(last_snapshot, 'lineno')
+                #     print("[ Top 3 differences ]")
+                #     for stat in top_stats[:3]:
+                #         print(stat)
 
 
 

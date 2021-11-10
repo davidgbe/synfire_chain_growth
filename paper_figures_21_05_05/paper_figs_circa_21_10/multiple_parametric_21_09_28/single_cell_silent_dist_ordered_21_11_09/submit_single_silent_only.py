@@ -72,14 +72,14 @@ def pad_zeros(to_pad, length):
 		padded = '0' + padded
 	return padded
 
-batch_size = 3
+batch_size = 10
 
 params = OrderedDict()
-params['SEED'] = [str(i) for i in range(2031, 2061)]
+params['SEED'] = [str(i) for i in range(2061, 2091)]
 params['ALPHA_1'] = [ str(3e-2) ]
-params['ALPHA_2'] = [ str(0.5e-2) ]
+params['ALPHA_2'] = [ str(0.5e-2), str(2e-2) ]
 params['SYN_PROP_DIST'] = [ str(0.9) ]
-params['DROP_SEV'] = [str(0.35), str(0.5)]
+params['DROP_SEV'] = [str(0.5)]
 
 # for key in params.keys():
 # 	if key == 'SEED':
