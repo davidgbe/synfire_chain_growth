@@ -170,7 +170,7 @@ def generate_exc_ff_chain(m):
         gamma = m.MEAN_N_CONS_PER_CELL * synfire_proportion / (m.PROJECTION_NUM * (1 - np.exp(-10/m.CON_PROB_FF_CONST))/(1 - np.exp(-1/m.CON_PROB_FF_CONST)))
 
         ### Calculate scaling coef for synapses based on 'synfire_proportion'
-        min_weight_scaling_coef = 0.05
+        min_weight_scaling_coef = 0.2
         weight_scaling_coef = (1 - min_weight_scaling_coef) * synfire_proportion + min_weight_scaling_coef
 
         # if synfire_proportion > 0.98:
@@ -260,7 +260,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
         np.fill_diagonal(w_e_e_r, 0.)
 
-        min_weight_scaling_coef = 0.05
+        min_weight_scaling_coef = 0.2
         weight_scaling_coefs = (1 - min_weight_scaling_coef) * syn_props + min_weight_scaling_coef
 
         e_i_r = np.stack([gaussian_if_under_val(m.E_I_CON_PROB, (m.N_INH,), w_scale * m.W_E_I_R, 0.2 * m.W_E_I_R) for w_scale in weight_scaling_coefs]).T
