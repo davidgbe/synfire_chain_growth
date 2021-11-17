@@ -85,10 +85,10 @@ params['DROP_SEV'] = [str(0.5)]
 # params['ALPHA_2'] = ((1e-2, 5e-2), 5)
 # params['GAMMA'] = ((0, 2e-4), 5)
 
-# for key in params.keys():
-# 	if key == 'SEED':
-# 		continue
-# 	params[key] = [str(v[1]) for v in iter_range(params[key][0], params[key][1])]
+for key in params.keys():
+	if key == 'SEED' or type(params[key][0]) is str:
+		continue
+	params[key] = [str(v[1]) for v in iter_range(params[key][0], params[key][1])]
 
 all_values = cartesian(*(params.values()))
 n_scripts = len(all_values[0])
