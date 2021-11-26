@@ -86,9 +86,9 @@ M = Generic(
     I_E_CON_PROB=0.6,
 
     # Weights
-    W_E_I_R=1e-5,
-    W_E_I_R_MAX=1.4e-5,
-    W_E_I_R_SUMMED_MAX=0.75 * int(0.05 * 400) * 1.4e-5,
+    W_E_I_R=1.3e-5,
+    W_E_I_R_MAX=1.6e-5,
+    W_E_I_R_SUMMED_MAX=0.9 * int(0.05 * 400) * 1.6e-5,
     W_I_E_R=0.9e-5,
     W_A=0,
     W_E_E_R=0.26 * 0.004 * 0.55,
@@ -110,7 +110,7 @@ M = Generic(
 
     # Synaptic plasticity params
     TAU_STDP_PAIR_EE=30e-3,
-    TAU_STDP_PAIR_EI=30e-3,
+    TAU_STDP_PAIR_EI=5e-3,
 
     SINGLE_CELL_FR_SETPOINT_MIN=10,
     SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
@@ -134,7 +134,7 @@ M.KERNEL_PAIR_EE = np.exp(-np.arange(M.CUT_IDX_TAU_PAIR_EE) * S.DT / M.TAU_STDP_
 M.CUT_IDX_TAU_PAIR_EI = int(2 * M.TAU_STDP_PAIR_EI / S.DT)
 kernel_base_ei = np.arange(2 * M.CUT_IDX_TAU_PAIR_EI + 1) - M.CUT_IDX_TAU_PAIR_EI
 M.KERNEL_PAIR_EI = np.exp(-1 * np.abs(kernel_base_ei) * S.DT / M.TAU_STDP_PAIR_EI).astype(float)
-M.KERNEL_PAIR_EI[M.CUT_IDX_TAU_PAIR_EI:] *= -1
+M.KERNEL_PAIR_EI[:M.CUT_IDX_TAU_PAIR_EI] *= -1
 
 M.DROPOUT_MAX_IDX = M.N_EXC + M.N_SILENT
 
@@ -608,7 +608,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     # i_total_potentiation = m.ETA * (m.ALPHA_2 * fr_update_i)
 
                     e_total_potentiation = m.ETA * (m.ALPHA_1 * fr_update_e + m.BETA * stdp_burst_pair)
-                    i_total_potentiation = m.ETA * (1e-4 * m.BETA * stdp_burst_pair_e_i)
+                    i_total_potentiation = m.ETA * (m.BETA * stdp_burst_pair_e_i)
 
 
                     if type(e_total_potentiation) is not float:
