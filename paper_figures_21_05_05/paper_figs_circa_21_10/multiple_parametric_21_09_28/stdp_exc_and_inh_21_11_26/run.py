@@ -86,13 +86,14 @@ M = Generic(
     I_E_CON_PROB=0.6,
 
     # Weights
-    W_E_I_R=1.3e-5,
-    W_E_I_R_MAX=1.6e-5,
-    W_E_I_R_SUMMED_MAX=0.9 * int(0.05 * 400) * 1.6e-5,
+    W_E_I_R=1.2e-5,
+    W_E_I_R_MAX=1.4e-5,
+    W_E_I_R_SUMMED_MAX=int(0.05 * 400) * 1.4e-5,
     W_I_E_R=0.9e-5,
     W_A=0,
     W_E_E_R=0.26 * 0.004 * 0.55,
     W_E_E_R_MAX=0.26 * 0.004 * 2 * 0.55,
+    W_MIN=1e-6,
 
     # Dropout params
     DROPOUT_MIN_IDX=0,
@@ -539,7 +540,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                                 stdp_burst_pair += stdp_burst_pair_for_t_step
                                 stdp_burst_pair -= stdp_burst_pair_for_t_step.T
 
-                                sparse_spks_i = csc_matrix(np.flip(stdp_spk_hist_i, axis=0))
+                                sparse_spks_i = csc_matrix(stdp_spk_hist_i)
                                 trimmed_kernel_ei = m.KERNEL_PAIR_EI[M.CUT_IDX_TAU_PAIR_EI - (i_t - stdp_start_ei):M.CUT_IDX_TAU_PAIR_EI + (stdp_end_ei - i_t)]
                                 stdp_burst_pair_for_t_step_i = kron(sparse_spks_i, sparse_curr_spks_e).T.dot(trimmed_kernel_ei).reshape(spks_for_i_cells.shape[1], spks_for_e_cells.shape[1])
                                 stdp_burst_pair_e_i += stdp_burst_pair_for_t_step_i
@@ -625,12 +626,12 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     where_summed_max_exceeded = summed_i_cell_input > m.W_E_I_R_SUMMED_MAX
                     w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)][where_summed_max_exceeded, :] *= (m.W_E_I_R_SUMMED_MAX / summed_i_cell_input[where_summed_max_exceeded]).reshape(np.count_nonzero(where_summed_max_exceeded), 1)
 
-                    w_r_copy['E'][w_r_copy['E'] < 0] = 0
+                    w_r_copy['E'][(w_r_copy['E'] < m.W_MIN) & (w_r['E'] > 0)] = m.W_MIN
 
                     w_e_e_hard_bound = m.W_E_E_R_MAX / m.PROJECTION_NUM
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] > w_e_e_hard_bound] = w_e_e_hard_bound
                     # check bound for e_i
-
+                    w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)] > m.W_E_I_R_MAX] = m.W_E_I_R_MAX
 
                     if i_e == m.DROPOUT_ITER - 1:
                         active_cells_pre_dropout_mask = np.where(spks_for_e_cells.sum(axis=0) > 0, True, False)
