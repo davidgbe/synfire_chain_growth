@@ -87,7 +87,7 @@ if type(load_run_name) is list:
 else:
     all_dirs = filter_list_by_name_frags(all_in_dir('./robustness'), [load_run_name])
 
-params['LOADED_RUN_NAME'] = [d for d in all_dirs]
+params['LOADED_RUN_NAME'] = ['\"' + d + '\"' for d in all_dirs]
 params['SEED'] = [str(s) for s in range(2000, 2003)]
 print(params)
 
