@@ -32,7 +32,7 @@ parser.add_argument('--beta', metavar='b', type=float, nargs=1)
 parser.add_argument('--gamma', metavar='c', type=float, nargs=1)
 parser.add_argument('--fr_single_line_attr', metavar='s', type=int, nargs=1)
 parser.add_argument('--rng_seed', metavar='r', type=int, nargs=1)
-parser.add_argument('--load_mat', metavar='l', type=str, nargs=1)
+parser.add_argument('--load_run', metavar='l', type=str, nargs=1)
 parser.add_argument('--dropout_per', metavar='d', type=float, nargs=1)
 
 
@@ -97,13 +97,14 @@ M = Generic(
 
     # Dropout params
     DROPOUT_MIN_IDX=0,
-    DROPOUT_ITER=10000,
+    DROPOUT_ITER=40,
     DROPOUT_SEV=args.dropout_per[0],
 
     # E_SINGLE_FR_TRIALS=(1, 21),
     # I_SINGLE_FR_TRIALS=(31, 51),
     # POP_FR_TRIALS=(61, 81),
 
+    SET_FR_FLAG=(args.load_run is None or args.load_run[0] is None),
     E_SINGLE_FR_TRIALS=(1, 6),
     I_SINGLE_FR_TRIALS=(6, 11),
     POP_FR_TRIALS=(11, 16),
@@ -138,6 +139,9 @@ M.KERNEL_PAIR_EI = np.exp(-1 * np.abs(kernel_base_ei) * S.DT / M.TAU_STDP_PAIR_E
 M.KERNEL_PAIR_EI[:M.CUT_IDX_TAU_PAIR_EI] *= -1
 
 M.DROPOUT_MAX_IDX = M.N_EXC + M.N_SILENT
+
+if not M.SET_FR_FLAG:
+    M.E_STDP_START = M.E_SINGLE_FR_TRIALS[1]
 
 ## SMLN
 
@@ -184,7 +188,7 @@ def generate_exc_ff_chain(m):
 ### RUN_TEST function
 
 def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=None,
-    add_noise=True, dropouts=[{'E': 0, 'I': 0}], w_r_e=None, w_r_i=None, epochs=500):
+    add_noise=True, dropouts=[{'E': 0, 'I': 0}], w_r_e=None, w_r_i=None, e_cell_fr_setpoints=None, epochs=500):
 
     output_dir = f'./figures/{output_dir_name}'
     os.makedirs(output_dir)
@@ -270,7 +274,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
         
         for d_idx, dropout in enumerate(dropouts):
 
-            e_cell_fr_setpoints = None
             i_cell_fr_setpoints = None
             e_cell_pop_fr_setpoint = None
             active_cells_pre_dropout_mask = None
@@ -549,12 +552,12 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     # E SINGLE-CELL FIRING RATE RULE
                     fr_update_e = 0
 
-                    if i_e >= m.E_SINGLE_FR_TRIALS[0] and i_e < m.E_SINGLE_FR_TRIALS[1]:
+                    if i_e >= m.E_SINGLE_FR_TRIALS[0] and i_e < m.E_SINGLE_FR_TRIALS[1] and m.SET_FR_FLAG:
                         if e_cell_fr_setpoints is None:
                             e_cell_fr_setpoints = np.sum(spks_for_e_cells > 0, axis=0)
                         else:
                             e_cell_fr_setpoints += np.sum(spks_for_e_cells > 0, axis=0)
-                    elif i_e == m.E_SINGLE_FR_TRIALS[1]:
+                    elif i_e == m.E_SINGLE_FR_TRIALS[1] and m.SET_FR_FLAG:
                         e_cell_fr_setpoints = e_cell_fr_setpoints / (m.E_SINGLE_FR_TRIALS[1] - m.E_SINGLE_FR_TRIALS[0])
                         if m.SINGLE_CELL_LINE_ATTR == 1:
                             e_cell_fr_setpoints[e_cell_fr_setpoints < (m.SINGLE_CELL_LINE_ATTR_WIDTH/2) ] = m.SINGLE_CELL_LINE_ATTR_WIDTH/2
@@ -567,6 +570,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                                 size=e_cell_fr_setpoints[where_fr_is_0].shape[0]
                             )
                     elif i_e > m.E_SINGLE_FR_TRIALS[1]:
+                        print(e_cell_fr_setpoints)
                         e_diffs = e_cell_fr_setpoints - np.sum(spks_for_e_cells > 0, axis=0)
                         if m.SINGLE_CELL_LINE_ATTR == 1:
                             e_diffs[(e_diffs <= (m.SINGLE_CELL_LINE_ATTR_WIDTH/2)) & (e_diffs >= (-1 * m.SINGLE_CELL_LINE_ATTR_WIDTH/2))] = 0
@@ -627,6 +631,8 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)][where_summed_max_exceeded, :] *= (m.W_E_I_R_SUMMED_MAX / summed_i_cell_input[where_summed_max_exceeded]).reshape(np.count_nonzero(where_summed_max_exceeded), 1)
 
                     w_r_copy['E'][(w_r_copy['E'] < m.W_MIN) & (w_r['E'] > 0)] = m.W_MIN
+                    if surviving_cell_indices is not None:
+                        w_r_copy['E'][:, (~(surviving_cell_indices.astype(bool))).nonzero()[0]] = 0
 
                     w_e_e_hard_bound = m.W_E_E_R_MAX / m.PROJECTION_NUM
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)][w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] > w_e_e_hard_bound] = w_e_e_hard_bound
@@ -638,7 +644,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
                     if i_e % 10 == 0:
                         if i_e < m.DROPOUT_ITER:
-                            if i_e % 250 == 0:
+                            if i_e % 30 == 0:
                                 sio.savemat(robustness_output_dir + '/' + f'title_{title}_dropout_{d_idx}_eidx_{zero_pad(i_e, 4)}', {
                                     'first_spk_times': first_spk_times,
                                     'w_r_e_summed': np.sum(rsp.ntwk.w_r['E'][:m.N_EXC, :m.N_EXC], axis=1),
@@ -707,12 +713,12 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
 
 
-def quick_plot(m, run_title='', w_r_e=None, w_r_i=None, repeats=1, show_connectivity=True, n_show_only=None, add_noise=True, dropouts=[{'E': 0, 'I': 0}]):
+def quick_plot(m, run_title='', w_r_e=None, w_r_i=None, repeats=1, show_connectivity=True, n_show_only=None, add_noise=True, dropouts=[{'E': 0, 'I': 0}], e_cell_fr_setpoints=None):
     output_dir_name = f'{run_title}_{time_stamp(s=True)}:{zero_pad(int(np.random.rand() * 9999), 4)}'
 
     run_test(m, output_dir_name=output_dir_name, show_connectivity=show_connectivity,
                         repeats=repeats, n_show_only=n_show_only, add_noise=add_noise, dropouts=dropouts,
-                        w_r_e=w_r_e, w_r_i=w_r_i, epochs=S.EPOCHS)
+                        w_r_e=w_r_e, w_r_i=w_r_i, epochs=S.EPOCHS, e_cell_fr_setpoints=e_cell_fr_setpoints)
 
 def process_single_activation(exc_raster, m):
     # extract first spikes
@@ -723,11 +729,11 @@ def process_single_activation(exc_raster, m):
             first_spk_times[nrn_idx] = exc_raster[0, i]
     return first_spk_times
 
-def load_weight_matrices(direc, num):
+def load_previous_run(direc, num):
     file_names = sorted(all_files_from_dir(direc))
     file = file_names[num]
     loaded = sio.loadmat(os.path.join(direc, file))
-    return loaded['w_r_e'], loaded['w_r_i']
+    return loaded
 
 def clip(f, n=1):
     f_str = str(f)
@@ -739,9 +745,13 @@ title = f'{args.title[0]}_ff_{clip(M.W_E_E_R / (0.26 * 0.004))}_eir_{clip(M.W_E_
 for i in range(1):
     w_r_e = None
     w_r_i = None
-    if args.load_mat is not None and args.load_mat[0] is not '':
-        w_r_e, w_r_i = load_weight_matrices(args.load_mat[0], 225)
+    e_cell_fr_setpoints = None
+    if args.load_run is not None and args.load_run[0] is not '':
+        loaded_data = load_previous_run(os.path.join('./robustness', args.load_run[0]), 3)
+        w_r_e = loaded_data['w_r_e'].toarray()
+        w_r_i = loaded_data['w_r_i'].toarray()
+        e_cell_fr_setpoints = loaded_data['e_cell_fr_setpoints'][0]
 
-    all_rsps = quick_plot(M, run_title=title, w_r_e=w_r_e, w_r_i=w_r_i, dropouts=[
+    all_rsps = quick_plot(M, run_title=title, w_r_e=w_r_e, w_r_i=w_r_i, e_cell_fr_setpoints=e_cell_fr_setpoints, dropouts=[
         {'E': M.DROPOUT_SEV, 'I': 0},
     ])
