@@ -644,7 +644,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
                     if i_e % 10 == 0:
                         if i_e < m.DROPOUT_ITER:
-                            if i_e % 30 == 0:
+                            if i_e % 250 == 0:
                                 sio.savemat(robustness_output_dir + '/' + f'title_{title}_dropout_{d_idx}_eidx_{zero_pad(i_e, 4)}', {
                                     'first_spk_times': first_spk_times,
                                     'w_r_e_summed': np.sum(rsp.ntwk.w_r['E'][:m.N_EXC, :m.N_EXC], axis=1),
@@ -747,7 +747,7 @@ for i in range(1):
     w_r_i = None
     e_cell_fr_setpoints = None
     if args.load_run is not None and args.load_run[0] is not '':
-        loaded_data = load_previous_run(os.path.join('./robustness', args.load_run[0]), 3)
+        loaded_data = load_previous_run(os.path.join('./robustness', args.load_run[0]), 975)
         w_r_e = loaded_data['w_r_e'].toarray()
         w_r_i = loaded_data['w_r_i'].toarray()
         e_cell_fr_setpoints = loaded_data['e_cell_fr_setpoints'][0]
