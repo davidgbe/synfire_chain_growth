@@ -21,7 +21,7 @@ echo $CURRDIR
 cd //gscratch/stf/davidgbe/compneuro
 source davidgbe-env/bin/activate
 cd $CURRDIR
-python run.py --title single_only_TITLE --alpha_1 3e-2 --alpha_2 0.5e-2 --beta 1e-1 --gamma 0 --fr_single_line_attr 0 --rng_seed SEED --dropout_per 0.5 --loaded_run LOADED_RUN_NAME &
+python run.py --title single_only_TITLE --alpha_1 3e-2 --alpha_2 0.5e-2 --beta 1e-1 --gamma 0 --fr_single_line_attr 0 --rng_seed SEED --dropout_per 0.5 --load_run LOADED_RUN_NAME &
 wait
 deactivate
 
