@@ -107,7 +107,7 @@ M = Generic(
     SET_FR_FLAG=(args.load_run is None or args.load_run[0] is None),
     E_SINGLE_FR_TRIALS=(1, 6),
     I_SINGLE_FR_TRIALS=(6, 11),
-    POP_FR_TRIALS=(11, 16),
+    POP_FR_TRIALS=(11, 30),
     E_STDP_START=20,
 
     # Synaptic plasticity params
@@ -570,7 +570,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                                 size=e_cell_fr_setpoints[where_fr_is_0].shape[0]
                             )
                     elif i_e > m.E_SINGLE_FR_TRIALS[1]:
-                        print(e_cell_fr_setpoints)
                         e_diffs = e_cell_fr_setpoints - np.sum(spks_for_e_cells > 0, axis=0)
                         if m.SINGLE_CELL_LINE_ATTR == 1:
                             e_diffs[(e_diffs <= (m.SINGLE_CELL_LINE_ATTR_WIDTH/2)) & (e_diffs >= (-1 * m.SINGLE_CELL_LINE_ATTR_WIDTH/2))] = 0
@@ -580,18 +579,18 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
 
 
-                    # # E POPULATION-LEVEL FIRING RATE RULE
-                    # fr_pop_update = 0
+                    # E POPULATION-LEVEL FIRING RATE RULE
+                    fr_pop_update = 0
 
-                    # if i_e >= m.POP_FR_TRIALS[0] and i_e < m.POP_FR_TRIALS[1]:
-                    #     if e_cell_pop_fr_setpoint is None:
-                    #         e_cell_pop_fr_setpoint = np.sum(spks_for_e_cells)
-                    #     else:
-                    #         e_cell_pop_fr_setpoint += np.sum(spks_for_e_cells)
-                    # elif i_e == m.POP_FR_TRIALS[1]:
-                    #     e_cell_pop_fr_setpoint = e_cell_pop_fr_setpoint / (m.POP_FR_TRIALS[1] - m.POP_FR_TRIALS[0])
-                    # elif i_e > m.POP_FR_TRIALS[1]:
-                    #     fr_pop_update = e_cell_pop_fr_setpoint - np.sum(spks_for_e_cells)
+                    if i_e >= m.POP_FR_TRIALS[0] and i_e < m.POP_FR_TRIALS[1]:
+                        if e_cell_pop_fr_setpoint is None:
+                            e_cell_pop_fr_setpoint = np.sum(spks_for_e_cells)
+                        else:
+                            e_cell_pop_fr_setpoint += np.sum(spks_for_e_cells)
+                    elif i_e == m.POP_FR_TRIALS[1]:
+                        e_cell_pop_fr_setpoint = e_cell_pop_fr_setpoint / (m.POP_FR_TRIALS[1] - m.POP_FR_TRIALS[0])
+                    elif i_e > m.POP_FR_TRIALS[1]:
+                        fr_pop_update = e_cell_pop_fr_setpoint - np.sum(spks_for_e_cells)
 
 
 
