@@ -92,10 +92,10 @@ params['GAMMA'] = [ str(0.1e-4), str(0.2e-4), str(0.3e-4) ]
 params['SEED'] = [str(2000)]
 print(params)
 
-for key in params.keys():
-	if key == 'SEED' or key == 'LOADED_RUN_NAME':
-		continue
-	params[key] = [str(v[1]) for v in iter_range(params[key][0], params[key][1])]
+# for key in params.keys():
+# 	if key == 'SEED' or key == 'LOADED_RUN_NAME':
+# 		continue
+# 	params[key] = [str(v[1]) for v in iter_range(params[key][0], params[key][1])]
 
 all_values = cartesian(*(params.values()))
 n_scripts = len(all_values[0])
