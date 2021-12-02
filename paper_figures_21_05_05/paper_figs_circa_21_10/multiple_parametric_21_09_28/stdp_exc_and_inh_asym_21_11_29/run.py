@@ -506,8 +506,10 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                             return spks[-1]
 
                     # STDP FOR E CELLS: put in pairwise STDP on filtered_spks_for_e_cells
-                    stdp_burst_pair = 0
-                    stdp_burst_pair_e_i = 0
+                    stdp_burst_pair_plus = 0
+                    stdp_burst_pair_minus = 0
+                    stdp_burst_pair_e_i_plus = 0
+                    stdp_burst_pair_e_i_minus = 0
 
                     if i_e >= m.E_STDP_START:
                         filtered_spks_for_e_cells = np.zeros(spks_for_e_cells.shape)
@@ -540,8 +542,10 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
                                 # compute sparse pairwise correlations with curr_spks and spikes in stdp pairwise time window & dot into pairwise kernel
                                 stdp_burst_pair_for_t_step = kron(sparse_curr_spks_e, sparse_spks_e).T.dot(m.KERNEL_PAIR_EE[:t_points_for_stdp_ee]).reshape(spks_for_e_cells.shape[1], spks_for_e_cells.shape[1])
-                                stdp_burst_pair += stdp_burst_pair_for_t_step
-                                stdp_burst_pair -= stdp_burst_pair_for_t_step.T
+                                
+
+                                stdp_burst_pair_plus += stdp_burst_pair_for_t_step
+                                stdp_burst_pair_minus -= stdp_burst_pair_for_t_step.T
 
                                 sparse_spks_i = csc_matrix(stdp_spk_hist_i)
                                 trimmed_kernel_ei = m.KERNEL_PAIR_EI[M.CUT_IDX_TAU_PAIR_EI - (i_t - stdp_start_ei):M.CUT_IDX_TAU_PAIR_EI + (stdp_end_ei - i_t)]
@@ -621,6 +625,8 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         e_total_potentiation[m.DROPOUT_MAX_IDX:, :] = 0
                         e_total_potentiation[:, :m.DROPOUT_MIN_IDX] = 0
                         e_total_potentiation[:, m.DROPOUT_MAX_IDX:] = 0
+
+
 
 
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] += (e_total_potentiation * w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)])
