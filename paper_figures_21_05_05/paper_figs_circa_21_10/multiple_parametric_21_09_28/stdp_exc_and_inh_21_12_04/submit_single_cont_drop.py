@@ -27,6 +27,9 @@ def replace_all(line, repl_dict):
 def format_title(params):
 	title = ''
 	for k, v in params.items():
+		if k == 'LOADED_RUN_NAME':
+			v = v[v.find('_'):]
+			v = 'initial' + v
 		title += ('_' + k + '_' + v)
 	return title
 

@@ -27,6 +27,9 @@ def replace_all(line, repl_dict):
 def format_title(params):
 	title = ''
 	for k, v in params.items():
+		if k == 'LOADED_RUN_NAME':
+			v = v[v.find('_'):]
+			v = 'initial' + v
 		title += ('_' + k + '_' + v)
 	return title
 
@@ -88,7 +91,7 @@ else:
     all_dirs = filter_list_by_name_frags(all_in_dir('./robustness'), [load_run_name])
 
 params['LOADED_RUN_NAME'] = [d for d in all_dirs]
-params['GAMMA'] = [ str(0.1e-4), str(0.2e-4), str(0.3e-4) ]
+params['GAMMA'] = [ str(0), str(0.1e-4), str(1e-4) ]
 params['SEED'] = [str(2000)]
 print(params)
 
