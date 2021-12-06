@@ -97,7 +97,7 @@ M = Generic(
 
     # Dropout params
     DROPOUT_MIN_IDX=0,
-    DROPOUT_ITER=10000,
+    DROPOUT_ITER=40,
     DROPOUT_SEV=args.dropout_per[0],
 
     # E_SINGLE_FR_TRIALS=(1, 21),
