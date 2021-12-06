@@ -92,7 +92,7 @@ M = Generic(
     W_I_E_R=1.1e-5,
     W_A=0,
     W_E_E_R=0.26 * 0.004 * 0.8,
-    W_E_E_R_MAX=0.26 * 0.004 * 10 * 0.8,
+    W_E_E_R_MAX=0.26 * 0.004 * 20 * 0.8,
     W_MIN=1e-8,
 
     # Dropout params
@@ -612,7 +612,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     # e_total_potentiation = m.ETA * (m.ALPHA_1 * fr_update_e + m.BETA * stdp_burst_pair + m.GAMMA * fr_pop_update)
                     # i_total_potentiation = m.ETA * (m.ALPHA_2 * fr_update_i)
 
-                    e_total_potentiation = m.ETA * (m.ALPHA_1 * fr_update_e + 0 * stdp_burst_pair)
+                    e_total_potentiation = m.ETA * (m.ALPHA_1 * fr_update_e + 0 * stdp_burst_pair + m.GAMMA * fr_pop_update)
                     i_total_potentiation = m.ETA * (m.BETA * stdp_burst_pair_e_i)
 
 
