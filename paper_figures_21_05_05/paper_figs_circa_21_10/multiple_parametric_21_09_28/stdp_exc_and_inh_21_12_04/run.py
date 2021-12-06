@@ -748,7 +748,7 @@ for i in range(1):
     w_r_i = None
     e_cell_fr_setpoints = None
     if args.load_run is not None and args.load_run[0] is not '':
-        loaded_data = load_previous_run(os.path.join('./robustness', args.load_run[0]), 975)
+        loaded_data = load_previous_run(os.path.join('./robustness', args.load_run[0]), 125)
         w_r_e = loaded_data['w_r_e'].toarray()
         w_r_i = loaded_data['w_r_i'].toarray()
         e_cell_fr_setpoints = loaded_data['e_cell_fr_setpoints'][0]
