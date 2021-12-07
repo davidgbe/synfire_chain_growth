@@ -16,7 +16,7 @@ cc = np.concatenate
 class LIFNtwkG(object):
     """Network of leaky integrate-and-fire neurons with *conductance-based* synapses."""
     
-    def __init__(self, c_m, g_l, e_l, v_th, v_r, t_r, e_s, t_s, w_r, w_u, plasticity_indices, connectivity, W_max, m,
+    def __init__(self, c_m, g_l, e_l, v_th, v_r, t_r, e_s, t_s, w_r, w_u, plasticity_indices, W_max, m,
         sparse=True, output=True, output_freq=1000, homeo=True, weight_update=True):
         # ntwk size
         n = next(iter(w_r.values())).shape[0]
@@ -59,7 +59,6 @@ class LIFNtwkG(object):
         self.w_r_e_plastic_mask = w_r_e_plastic_mask & w_r_e_plastic_mask.T
 
         w_r_e_plastic = self.w_r['E'][self.w_r_e_plastic_mask].reshape(len(self.plasticity_indices), len(self.plasticity_indices))
-        self.connections = connectivity
 
         # weight restriction parameters
         self.W_max = W_max # rough estimate of max synapse strength onto single neuron

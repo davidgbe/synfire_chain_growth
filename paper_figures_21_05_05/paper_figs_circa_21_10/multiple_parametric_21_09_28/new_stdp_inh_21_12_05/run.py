@@ -238,6 +238,8 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
             [ e_i_r,  np.zeros((m.N_INH, m.N_INH + m.N_SILENT)) ],
         ])
 
+    ei_connectivity = np.where(w_r_e[(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)], 1, 0)
+
     if w_r_i is None:
 
         i_e_r = gaussian_if_under_val(m.I_E_CON_PROB, (m.N_EXC, m.N_INH), m.W_I_E_R, 0.2 * m.W_I_E_R)
@@ -344,7 +346,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     w_r=w_r_copy,
                     w_u=w_u,
                     plasticity_indices=np.arange(m.N_EXC),
-                    connectivity=connectivity,
                     W_max=m.W_E_E_R_MAX,
                     m=m.M,
                     output=False,
@@ -629,7 +630,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
 
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] += (e_total_potentiation * w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)])
-                    w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)] += i_total_potentiation * (m.W_E_I_R_MAX - w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)])
+                    w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)] += i_total_potentiation * (m.W_E_I_R_MAX * ei_connectivity - w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)])
                     w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)] += i_total_depression * w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)]
 
                     summed_i_cell_input = w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)].sum(axis=1)
