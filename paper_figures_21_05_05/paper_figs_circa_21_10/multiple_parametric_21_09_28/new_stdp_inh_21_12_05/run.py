@@ -305,6 +305,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
                 if i_e == m.DROPOUT_ITER:
                     w_r_copy['E'][:, :(m.N_EXC + m.N_SILENT)], surviving_cell_indices = dropout_on_mat(w_r_copy['E'][:, :(m.N_EXC + m.N_SILENT)], dropout['E'], min_idx=m.DROPOUT_MIN_IDX, max_idx=m.DROPOUT_MAX_IDX)
+                    ei_connectivity = np.where(w_r_copy['E'][-m.N_INH:, :m.N_EXC] > 0, ei_connectivity, 0)
 
                 t = np.arange(0, S.T, S.DT)
 
