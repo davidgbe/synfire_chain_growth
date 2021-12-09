@@ -580,15 +580,15 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     # E POPULATION-LEVEL FIRING RATE RULE
                     fr_pop_step = 0
 
-                    # if i_e >= m.POP_FR_TRIALS[0] and i_e < m.POP_FR_TRIALS[1]:
-                    #     if e_cell_pop_fr_setpoint is None:
-                    #         e_cell_pop_fr_setpoint = np.sum(spks_for_e_cells)
-                    #     else:
-                    #         e_cell_pop_fr_setpoint += np.sum(spks_for_e_cells)
-                    # elif i_e == m.POP_FR_TRIALS[1]:
-                    #     e_cell_pop_fr_setpoint = e_cell_pop_fr_setpoint / (m.POP_FR_TRIALS[1] - m.POP_FR_TRIALS[0])
-                    # elif i_e > m.POP_FR_TRIALS[1]:
-                    #     fr_pop_update = e_cell_pop_fr_setpoint - np.sum(spks_for_e_cells)
+                    if i_e >= m.POP_FR_TRIALS[0] and i_e < m.POP_FR_TRIALS[1]:
+                        if e_cell_pop_fr_setpoint is None:
+                            e_cell_pop_fr_setpoint = np.sum(spks_for_e_cells)
+                        else:
+                            e_cell_pop_fr_setpoint += np.sum(spks_for_e_cells)
+                    elif i_e == m.POP_FR_TRIALS[1]:
+                        e_cell_pop_fr_setpoint = e_cell_pop_fr_setpoint / (m.POP_FR_TRIALS[1] - m.POP_FR_TRIALS[0])
+                    elif i_e > m.POP_FR_TRIALS[1]:
+                        fr_pop_step = e_cell_pop_fr_setpoint - np.sum(spks_for_e_cells)
 
                     #     fr_pop_step_mean = (-1 + np.exp(fr_pop_update / 60)) / (1 + np.exp(fr_pop_update / 60))
                     #     print('pop_percent_change:', fr_pop_step_mean * m.GAMMA * m.ETA)
