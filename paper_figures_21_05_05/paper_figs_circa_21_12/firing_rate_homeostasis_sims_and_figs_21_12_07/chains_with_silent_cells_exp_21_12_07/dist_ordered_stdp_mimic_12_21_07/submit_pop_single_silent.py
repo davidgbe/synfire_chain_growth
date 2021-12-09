@@ -76,9 +76,9 @@ batch_size = 10
 
 params = OrderedDict()
 params['SEED'] = [str(i) for i in range(2060, 2080)]
-params['ALPHA_1'] = [ str(3e-2) ]
-params['ALPHA_2'] = ((1e-2, 5e-2), 8)
-params['GAMMA'] = [ str(0.1e-4), str(0.2e-4), str(0.3e-4) ]
+params['ALPHA_1'] = [ str(6e-2) ]
+params['ALPHA_2'] = [ str(0.5e-2) ]
+params['GAMMA'] = [ str(0), str(1e-6) ]
 params['SYN_PROP_DIST'] = [ str(1.3) ]
 params['DROP_SEV'] = [str(0.5)]
 # params['ALPHA_1'] = ((1e-2, 5e-2), 5)
