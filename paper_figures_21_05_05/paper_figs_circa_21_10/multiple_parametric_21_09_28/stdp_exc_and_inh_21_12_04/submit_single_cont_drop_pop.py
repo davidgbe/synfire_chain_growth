@@ -8,7 +8,7 @@ scripts = [
 	'submit_single_cont_drop_pop.slurm',
 ]
 drop_sev = 0.5
-load_run_name = 'settling'
+load_run_name = 'single_only'
 
 ### functions
 
