@@ -631,6 +631,9 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
 
                     w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)] += (e_total_potentiation * w_r_copy['E'][:(m.N_EXC + m.N_SILENT), :(m.N_EXC + m.N_SILENT)])
+                    f = (m.W_E_I_R_MAX * ei_connectivity - w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)])
+                    print(f[f > 0])
+                    print(np.count_nonzero(f[f > 0]))
                     w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)] += i_total_potentiation * (m.W_E_I_R_MAX * ei_connectivity - w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)])
                     w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)] += i_total_depression * w_r_copy['E'][(m.N_EXC + m.N_SILENT):, :(m.N_EXC + m.N_SILENT)]
 
