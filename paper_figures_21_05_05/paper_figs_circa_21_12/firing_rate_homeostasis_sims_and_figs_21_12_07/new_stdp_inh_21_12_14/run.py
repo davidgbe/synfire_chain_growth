@@ -37,6 +37,7 @@ parser.add_argument('--dropout_per', metavar='d', type=float, nargs=1)
 parser.add_argument('--drop_iter', metavar='di', type=int, nargs=1)
 parser.add_argument('--tau_stdp_ei', metavar='ts_ei', type=float, nargs=1)
 parser.add_argument('--t_r_i', metavar='tri', type=float, nargs=1)
+parser.add_argument('--stdp_dep', metavar='s_dep', type=float, nargs=1)
 
 args = parser.parse_args()
 
@@ -138,7 +139,7 @@ M.KERNEL_PAIR_EE = np.exp(-np.arange(M.CUT_IDX_TAU_PAIR_EE) * S.DT / M.TAU_STDP_
 M.CUT_IDX_TAU_PAIR_EI = int(2 * M.TAU_STDP_PAIR_EI / S.DT)
 kernel_base_ei = np.arange(2 * M.CUT_IDX_TAU_PAIR_EI + 1) - M.CUT_IDX_TAU_PAIR_EI
 M.KERNEL_PAIR_EI = np.exp(-1 * np.abs(kernel_base_ei) * S.DT / M.TAU_STDP_PAIR_EI).astype(float)
-M.KERNEL_PAIR_EI[:M.CUT_IDX_TAU_PAIR_EI] *= -0.8
+M.KERNEL_PAIR_EI[:M.CUT_IDX_TAU_PAIR_EI] *= args.stdp_dep[0]
 
 M.DROPOUT_MAX_IDX = M.N_EXC + M.N_SILENT
 

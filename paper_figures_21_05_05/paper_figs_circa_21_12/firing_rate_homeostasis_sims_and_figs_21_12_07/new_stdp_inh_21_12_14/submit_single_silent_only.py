@@ -79,6 +79,7 @@ params['SEED'] = [str(i) for i in range(2060, 2065)]
 params['T_S_EI'] = ['3e-3', '10e-3']
 params['TRI'] = ['0.5e-3', '1e-3']
 params['BETA'] = ['1e-1', '1e-2']
+params['STDP_EI_DEP'] = ['-0.8', '-0.95']
 
 # for key in params.keys():
 # 	if key == 'SEED':
