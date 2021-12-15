@@ -34,6 +34,7 @@ parser.add_argument('--fr_single_line_attr', metavar='s', type=int, nargs=1)
 parser.add_argument('--rng_seed', metavar='r', type=int, nargs=1)
 parser.add_argument('--load_run', metavar='l', type=str, nargs=1)
 parser.add_argument('--dropout_per', metavar='d', type=float, nargs=1)
+parser.add_argument('--drop_iter', metavar='di', type=int, nargs=1)
 parser.add_argument('--tau_stdp_ei', metavar='ts_ei', type=float, nargs=1)
 parser.add_argument('--t_r_i', metavar='tri', type=float, nargs=1)
 
@@ -98,7 +99,7 @@ M = Generic(
 
     # Dropout params
     DROPOUT_MIN_IDX=0,
-    DROPOUT_ITER=40,
+    DROPOUT_ITER=args.drop_iter[0],
     DROPOUT_SEV=args.dropout_per[0],
 
     # E_SINGLE_FR_TRIALS=(1, 21),
