@@ -272,8 +272,10 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
         i_e_r = gaussian_if_under_val(m.I_E_CON_PROB, (m.N_EXC, m.N_INH), m.W_I_E_R, 0.2 * m.W_I_E_R)
 
+        t_e_r = np.concatenate([10 * m.W_I_E_R * np.ones((m.N_EXC - 3 * m.PROJECTION_NUM, m.N_TERMINAL)), np.zeros((3 * m.PROJECTION_NUM, m.N_TERMINAL))], axis=0)
+
         w_r_i = np.block([
-            [ np.zeros((m.N_EXC, m.N_EXC)), i_e_r, 10 * m.W_I_E_R * np.ones((m.N_EXC - m.PROJECTION_NUM, m.N_TERMINAL)), np.zeros((m.PROJECTION_NUM, m.N_TERMINAL)) ],
+            [ np.zeros((m.N_EXC, m.N_EXC)), i_e_r,  t_e_r ],
             [ np.zeros((m.N_INH + m.N_TERMINAL, m.N_EXC + m.N_INH + m.N_TERMINAL)) ],
         ])
     
