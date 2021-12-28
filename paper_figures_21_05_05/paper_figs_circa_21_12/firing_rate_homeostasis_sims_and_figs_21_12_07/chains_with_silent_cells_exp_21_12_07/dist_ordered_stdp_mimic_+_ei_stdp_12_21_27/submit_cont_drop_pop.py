@@ -28,8 +28,7 @@ def format_title(params):
 	title = ''
 	for k, v in params.items():
 		if k == 'LOADED_RUN_NAME':
-			v = v[v.find('_'):]
-			v = 'initial' + v
+			v = v[-26:]
 		title += ('_' + k + '_' + v)
 	return title
 
