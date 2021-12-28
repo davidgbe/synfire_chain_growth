@@ -4,7 +4,7 @@ import functools
 
 base_path = os.curdir
 scripts = [
-	'submit_pop_single_silent.slurm',
+	'submit_single_silent_only_wide_attr.slurm',
 ]
 drop_sev = 0.5
 
@@ -75,17 +75,16 @@ def pad_zeros(to_pad, length):
 batch_size = 10
 
 params = OrderedDict()
-params['SEED'] = [str(i) for i in range(2060, 2090)]
-params['ALPHA_1'] = [ str(6e-2) ]
-params['ALPHA_2'] = [ str(0.5e-2) ]
-params['BETA'] = [ str(1e-2) ]
-params['SYN_PROP_DIST'] = [ str(1) ]
+params['SEED'] = [str(i) for i in range(2060, 2080)]
+params['ALPHA_1'] = [ str(3e-2) ]
+params['ALPHA_2'] = [ str(0.5e-2), str(0.75e-2) ]
+params['SYN_PROP_DIST'] = [ str(1.3) ]
 params['DROP_SEV'] = [str(0.5)]
 
-for key in params.keys():
-	if key == 'SEED' or type(params[key][0]) is str:
-		continue
-	params[key] = [str(v[1]) for v in iter_range(params[key][0], params[key][1])]
+# for key in params.keys():
+# 	if key == 'SEED':
+# 		continue
+# 	params[key] = [str(v[1]) for v in iter_range(params[key][0], params[key][1])]
 
 all_values = cartesian(*(params.values()))
 n_scripts = len(all_values[0])

@@ -97,7 +97,7 @@ params['ALPHA_1'] = [ str(6e-2) ]
 params['ALPHA_2'] = [ str(0.5e-2) ]
 params['BETA'] = [ str(1e-2) ]
 params['GAMMA'] = [ str(1e-2) ]
-params['SYN_PROP_DIST'] = [ str(1.3) ]
+params['SYN_PROP_DIST'] = [ str(1) ]
 params['DROP_SEV'] = [str(0.5)]
 params['LOADED_RUN_NAME'] = [d for d in all_dirs]
 print(params)

@@ -65,7 +65,6 @@ M = Generic(
     E_E=0, E_I=-.09, E_A=-.07, T_E=.004, T_I=.004, T_A=.006,
     
     N_EXC=1600,
-    N_SILENT=0,
     N_INH=200,
     N_TERMINAL=10,
     
@@ -104,16 +103,15 @@ M = Generic(
     DROPOUT_SEV=args.dropout_per[0],
 
     SET_FR_FLAG=(args.load_run is None or args.load_run[0] is None),
-    E_SINGLE_FR_TRIALS=(1, 5),
-    I_SINGLE_FR_TRIALS=(6, 11),
-    POP_FR_TRIALS=(11, 30),
-    E_STDP_START=6,
+    E_SINGLE_FR_TRIALS=(6, 11),
+    POP_FR_TRIALS=(1, 5),
+    E_STDP_START=30,
 
     # Synaptic plasticity params
     TAU_STDP_PAIR_EE=30e-3,
     TAU_STDP_PAIR_EI=10e-3,
 
-    SINGLE_CELL_FR_SETPOINT_MIN=10,
+    SINGLE_CELL_FR_SETPOINT_MIN=7,
     SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
     SINGLE_CELL_LINE_ATTR=args.fr_single_line_attr[0],
     SINGLE_CELL_LINE_ATTR_WIDTH=6,
@@ -129,7 +127,7 @@ np.random.seed(S.RNG_SEED)
 
 M.CON_PROBS_FF = np.exp(-1 * np.arange(M.N_EXC / M.PROJECTION_NUM) / M.CON_PROB_FF_CONST)
 
-M.W_U_E = 0.26 * 0.004 * 0.2
+M.W_U_E = 0.26 * 0.004 * 0.1
 
 M.CUT_IDX_TAU_PAIR_EE = int(2 * M.TAU_STDP_PAIR_EE / S.DT)
 M.KERNEL_PAIR_EE = np.exp(-np.arange(M.CUT_IDX_TAU_PAIR_EE) * S.DT / M.TAU_STDP_PAIR_EE).astype(float)
@@ -187,7 +185,7 @@ def generate_exc_ff_chain(m):
             connected_cells_for_layer = mat_1_if_under_val(gamma * M.CON_PROBS_FF[i], (m.PROJECTION_NUM,))
             strong_weight_gaussian = gaussian((m.PROJECTION_NUM,), w, 0.2 * w) * np.exp(-i / 4)
             weak_weight_guassian = 0.15 * w * np.random.exponential(scale=4, size=(m.PROJECTION_NUM,))
-            incoming_weights = np.where(all_syn_props[(l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] * syn_prop > 0.2, strong_weight_gaussian, weak_weight_guassian)
+            incoming_weights = np.where(all_syn_props[(l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] * syn_prop > 0.25, strong_weight_gaussian, weak_weight_guassian)
             incoming_weights[connected_cells_for_layer == 0] = 0
 
             cons_for_cell[0, (l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] = incoming_weights
@@ -577,19 +575,14 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                             e_cell_fr_setpoints[e_cell_fr_setpoints < (m.SINGLE_CELL_LINE_ATTR_WIDTH/2) ] = m.SINGLE_CELL_LINE_ATTR_WIDTH/2
                         where_fr_is_0 = (e_cell_fr_setpoints == 0)
                         if m.SINGLE_CELL_LINE_ATTR == 2:
-                            e_cell_fr_setpoints += m.SINGLE_CELL_LINE_ATTR_WIDTH/2
-                            e_cell_fr_setpoints[where_fr_is_0] = np.random.normal   (
-                                loc=m.SINGLE_CELL_FR_SETPOINT_MIN,
-                                scale=m.SINGLE_CELL_FR_SETPOINT_MIN_STD,
-                                size=e_cell_fr_setpoints[where_fr_is_0].shape[0]
-                            )
+                            e_cell_fr_setpoints = m.SINGLE_CELL_FR_SETPOINT_MIN * np.ones(len(e_cell_fr_setpoints))
                     elif i_e > m.E_SINGLE_FR_TRIALS[1]:
                         e_diffs = e_cell_fr_setpoints - np.sum(spks_for_e_cells > 0, axis=0)
                         if m.SINGLE_CELL_LINE_ATTR == 1:
                             e_diffs[(e_diffs <= (m.SINGLE_CELL_LINE_ATTR_WIDTH/2)) & (e_diffs >= (-1 * m.SINGLE_CELL_LINE_ATTR_WIDTH/2))] = 0
                         elif m.SINGLE_CELL_LINE_ATTR == 2:
                             e_diffs[e_diffs > 0] = 0
-                        fr_update_e = e_diffs.reshape(e_diffs.shape[0], 1) * np.ones((m.N_EXC + m.N_SILENT, m.N_EXC + m.N_SILENT)).astype(float)
+                        fr_update_e = e_diffs.reshape(e_diffs.shape[0], 1) * np.ones((m.N_EXC, m.N_EXC)).astype(float)
 
 
 
@@ -614,11 +607,11 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     i_total_depression = m.ETA * (m.BETA * stdp_burst_pair_e_i_minus)
 
 
-                    if type(e_total_potentiation) is not float:
-                        e_total_potentiation[:m.DROPOUT_MIN_IDX, :] = 0
-                        e_total_potentiation[m.DROPOUT_MAX_IDX:, :] = 0
-                        e_total_potentiation[:, :m.DROPOUT_MIN_IDX] = 0
-                        e_total_potentiation[:, m.DROPOUT_MAX_IDX:] = 0
+                    # if type(e_total_potentiation) is not float:
+                    #     e_total_potentiation[:m.DROPOUT_MIN_IDX, :] = 0
+                    #     e_total_potentiation[m.DROPOUT_MAX_IDX:, :] = 0
+                    #     e_total_potentiation[:, :m.DROPOUT_MIN_IDX] = 0
+                    #     e_total_potentiation[:, m.DROPOUT_MAX_IDX:] = 0
 
 
                     w_r_copy['E'][:m.N_EXC, :m.N_EXC] += (e_total_potentiation * w_r_copy['E'][:m.N_EXC, :m.N_EXC])

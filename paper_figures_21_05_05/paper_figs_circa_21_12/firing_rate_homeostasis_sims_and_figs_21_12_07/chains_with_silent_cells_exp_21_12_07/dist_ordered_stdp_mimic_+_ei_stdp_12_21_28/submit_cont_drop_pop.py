@@ -1,19 +1,26 @@
 import os
 from collections import OrderedDict
 import functools
+from utils.file_io import *
 
 base_path = os.curdir
 scripts = [
-	'submit_pop_single_silent.slurm',
+	'submit_cont_drop_pop.slurm',
 ]
 drop_sev = 0.5
+load_run_name = 'e_fr_ei_stdp_settle'
+
+### functions
 
 def replace_all(line, repl_dict):
 	s = line
 	for k, v in repl_dict.items():
-		if k == 'TITLE': 
+		if k == 'TITLE' or k == 'LOADED_RUN_NAME': 
 			continue
 		s = s.replace(k, v)
+
+	if 'LOADED_RUN_NAME' in repl_dict:
+		s = s.replace('LOADED_RUN_NAME', repl_dict['LOADED_RUN_NAME'])
 
 	if 'TITLE' in repl_dict:
 		s = s.replace('TITLE', repl_dict['TITLE'])
@@ -23,6 +30,8 @@ def replace_all(line, repl_dict):
 def format_title(params):
 	title = ''
 	for k, v in params.items():
+		if k == 'LOADED_RUN_NAME':
+			v = v[-26:]
 		title += ('_' + k + '_' + v)
 	return title
 
@@ -72,20 +81,31 @@ def pad_zeros(to_pad, length):
 		padded = '0' + padded
 	return padded
 
+### operating code
+
 batch_size = 10
 
 params = OrderedDict()
-params['SEED'] = [str(i) for i in range(2060, 2090)]
+
+if type(load_run_name) is list:
+    all_dirs = filter_list_by_name_frags(all_in_dir('./robustness'), load_run_name)
+else:
+    all_dirs = filter_list_by_name_frags(all_in_dir('./robustness'), [load_run_name])
+
+params['SEED'] = [str(s) for s in range(2000, 2002)]
 params['ALPHA_1'] = [ str(6e-2) ]
 params['ALPHA_2'] = [ str(0.5e-2) ]
 params['BETA'] = [ str(1e-2) ]
-params['SYN_PROP_DIST'] = [ str(1) ]
+params['GAMMA'] = [ str(1e-2) ]
+params['SYN_PROP_DIST'] = [ str(0.8) ]
 params['DROP_SEV'] = [str(0.5)]
+params['LOADED_RUN_NAME'] = [d for d in all_dirs]
+print(params)
 
-for key in params.keys():
-	if key == 'SEED' or type(params[key][0]) is str:
-		continue
-	params[key] = [str(v[1]) for v in iter_range(params[key][0], params[key][1])]
+# for key in params.keys():
+# 	if key == 'SEED' or key == 'LOADED_RUN_NAME':
+# 		continue
+# 	params[key] = [str(v[1]) for v in iter_range(params[key][0], params[key][1])]
 
 all_values = cartesian(*(params.values()))
 n_scripts = len(all_values[0])
@@ -114,6 +134,7 @@ for src_name in scripts:
 						augmented_params[v] = all_values[param_idx][n + batch_idx]
 
 					augmented_params['TITLE'] = format_title(augmented_params)
+
 					line_replaced = replace_all(line, augmented_params)
 					dst.write(line_replaced)
 			else:

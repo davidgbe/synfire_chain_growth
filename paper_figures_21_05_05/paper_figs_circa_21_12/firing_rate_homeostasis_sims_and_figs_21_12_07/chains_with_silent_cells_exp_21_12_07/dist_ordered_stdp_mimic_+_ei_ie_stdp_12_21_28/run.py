@@ -187,7 +187,7 @@ def generate_exc_ff_chain(m):
             connected_cells_for_layer = mat_1_if_under_val(gamma * M.CON_PROBS_FF[i], (m.PROJECTION_NUM,))
             strong_weight_gaussian = gaussian((m.PROJECTION_NUM,), w, 0.2 * w) * np.exp(-i / 4)
             weak_weight_guassian = 0.15 * w * np.random.exponential(scale=4, size=(m.PROJECTION_NUM,))
-            incoming_weights = np.where(all_syn_props[(l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] * syn_prop > 0.2, strong_weight_gaussian, weak_weight_guassian)
+            incoming_weights = np.where(all_syn_props[(l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] * syn_prop > 0.15, strong_weight_gaussian, weak_weight_guassian)
             incoming_weights[connected_cells_for_layer == 0] = 0
 
             cons_for_cell[0, (l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] = incoming_weights
@@ -518,6 +518,8 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     stdp_burst_pair = 0
                     stdp_burst_pair_e_i_plus = 0
                     stdp_burst_pair_e_i_minus = 0
+                    stdp_burst_pair_i_e_plus = 0
+                    stdp_burst_pair_i_e_minus = 0
 
                     if i_e >= m.E_STDP_START:
                         filtered_spks_for_e_cells = np.zeros(spks_for_e_cells.shape)
