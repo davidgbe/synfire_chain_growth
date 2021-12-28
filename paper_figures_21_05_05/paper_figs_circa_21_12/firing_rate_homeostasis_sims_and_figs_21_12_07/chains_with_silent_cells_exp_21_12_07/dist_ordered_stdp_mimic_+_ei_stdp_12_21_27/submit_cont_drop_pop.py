@@ -90,7 +90,7 @@ if type(load_run_name) is list:
 else:
     all_dirs = filter_list_by_name_frags(all_in_dir('./robustness'), [load_run_name])
 
-params['SEED'] = [str(s) for s in range(2000, 2003)]
+params['SEED'] = [str(s) for s in range(2000, 2002)]
 params['ALPHA_1'] = [ str(6e-2) ]
 params['ALPHA_2'] = [ str(0.5e-2) ]
 params['BETA'] = [ str(1e-2) ]
@@ -100,10 +100,10 @@ params['DROP_SEV'] = [str(0.5)]
 params['LOADED_RUN_NAME'] = [d for d in all_dirs]
 print(params)
 
-for key in params.keys():
-	if key == 'SEED' or key == 'LOADED_RUN_NAME':
-		continue
-	params[key] = [str(v[1]) for v in iter_range(params[key][0], params[key][1])]
+# for key in params.keys():
+# 	if key == 'SEED' or key == 'LOADED_RUN_NAME':
+# 		continue
+# 	params[key] = [str(v[1]) for v in iter_range(params[key][0], params[key][1])]
 
 all_values = cartesian(*(params.values()))
 n_scripts = len(all_values[0])
