@@ -15,9 +15,12 @@ load_run_name = 'e_fr_ei_stdp_settle'
 def replace_all(line, repl_dict):
 	s = line
 	for k, v in repl_dict.items():
-		if k == 'TITLE': 
+		if k == 'TITLE' or k == 'LOADED_RUN_NAME': 
 			continue
 		s = s.replace(k, v)
+
+	if 'LOADED_RUN_NAME' in repl_dict:
+		s = s.replace('LOADED_RUN_NAME', repl_dict['LOADED_RUN_NAME'])
 
 	if 'TITLE' in repl_dict:
 		s = s.replace('TITLE', repl_dict['TITLE'])
