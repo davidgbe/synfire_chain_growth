@@ -8,7 +8,7 @@ scripts = [
 	'submit_cont_drop_pop.slurm',
 ]
 drop_sev = 0.5
-load_run_name = 'e_fr_ei_stdp_settle'
+load_run_name = 'e_fr_ei_stdp_settle2_'
 
 ### functions
 
@@ -92,7 +92,7 @@ if type(load_run_name) is list:
 else:
     all_dirs = filter_list_by_name_frags(all_in_dir('./robustness'), [load_run_name])
 
-params['SEED'] = [str(s) for s in range(2000, 2002)]
+params['SEED'] = [str(s) for s in range(2000, 2001)]
 params['ALPHA_1'] = [ str(6e-2) ]
 params['ALPHA_2'] = [ str(0.5e-2) ]
 params['BETA'] = [ str(1e-2) ]
