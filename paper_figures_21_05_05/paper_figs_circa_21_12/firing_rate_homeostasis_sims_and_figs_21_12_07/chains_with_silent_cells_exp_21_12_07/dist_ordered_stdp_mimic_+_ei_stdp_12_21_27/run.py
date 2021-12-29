@@ -94,8 +94,8 @@ M = Generic(
     W_E_I_R_MAX=5e-5,
     W_I_E_R=1.1e-5,
     W_A=0,
-    W_E_E_R=0.26 * 0.004 * 1.,
-    W_E_E_R_MAX=0.26 * 0.004 * 20 * 1.,
+    W_E_E_R=0.26 * 0.004 * 1.1,
+    W_E_E_R_MAX=0.26 * 0.004 * 20 * 1.1,
     W_MIN=1e-8,
 
     # Dropout params
@@ -116,7 +116,7 @@ M = Generic(
     SINGLE_CELL_FR_SETPOINT_MIN=10,
     SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
     SINGLE_CELL_LINE_ATTR=args.fr_single_line_attr[0],
-    SINGLE_CELL_LINE_ATTR_WIDTH=6,
+    SINGLE_CELL_LINE_ATTR_WIDTH=5,
     ETA=0.3,
     ALPHA_1=args.alpha_1[0], #3e-2
     ALPHA_2=args.alpha_2[0],
@@ -186,8 +186,8 @@ def generate_exc_ff_chain(m):
         for i, l_idx in enumerate(reversed(range(layer_idx))):
             connected_cells_for_layer = mat_1_if_under_val(gamma * M.CON_PROBS_FF[i], (m.PROJECTION_NUM,))
             strong_weight_gaussian = gaussian((m.PROJECTION_NUM,), w, 0.2 * w) * np.exp(-i / 4)
-            weak_weight_guassian = 0.15 * w * np.random.exponential(scale=4, size=(m.PROJECTION_NUM,))
-            incoming_weights = np.where(all_syn_props[(l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] * syn_prop > 0.2, strong_weight_gaussian, weak_weight_guassian)
+            weak_weight_guassian = 0.1 * w * np.random.exponential(scale=4, size=(m.PROJECTION_NUM,))
+            incoming_weights = np.where(all_syn_props[(l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] * syn_prop > 0.55, strong_weight_gaussian, weak_weight_guassian)
             incoming_weights[connected_cells_for_layer == 0] = 0
 
             cons_for_cell[0, (l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] = incoming_weights
@@ -196,9 +196,9 @@ def generate_exc_ff_chain(m):
         n_rand_cons = m.MEAN_N_CONS_PER_CELL * (1 - syn_prop)
 
         if layer_idx > 0:
-            cons_for_cell[0, :(layer_idx * m.PROJECTION_NUM)] += 0.15 * w * exponential_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (layer_idx * m.PROJECTION_NUM,), 0.25)
+            cons_for_cell[0, :(layer_idx * m.PROJECTION_NUM)] += 0.1 * w * exponential_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (layer_idx * m.PROJECTION_NUM,), 0.25)
         if layer_idx < n_layers - 1:
-            cons_for_cell[0, ((layer_idx + 1) * m.PROJECTION_NUM):m.N_EXC] += 0.15 * w * exponential_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (m.N_EXC - ((layer_idx + 1) * m.PROJECTION_NUM),), 0.25)
+            cons_for_cell[0, ((layer_idx + 1) * m.PROJECTION_NUM):m.N_EXC] += 0.1 * w * exponential_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (m.N_EXC - ((layer_idx + 1) * m.PROJECTION_NUM),), 0.25)
 
         diffs_after_2.append(m.MEAN_N_CONS_PER_CELL - np.count_nonzero(cons_for_cell))
 
