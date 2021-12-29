@@ -8,7 +8,7 @@ scripts = [
 	'submit_cont_drop_pop.slurm',
 ]
 drop_sev = 0.5
-load_run_name = 'e_fr_ei_stdp_settle2_'
+load_run_name = 'e_fr_ei_stdp_settle3_'
 
 ### functions
 
@@ -97,7 +97,7 @@ params['ALPHA_1'] = [ str(6e-2) ]
 params['ALPHA_2'] = [ str(0.5e-2) ]
 params['BETA'] = [ str(1e-2) ]
 params['GAMMA'] = [ str(1e-2) ]
-params['SYN_PROP_DIST'] = [ str(1) ]
+params['SYN_PROP_DIST'] = [ str(0.6) ]
 params['DROP_SEV'] = [str(0.5)]
 params['LOADED_RUN_NAME'] = [d for d in all_dirs]
 print(params)
