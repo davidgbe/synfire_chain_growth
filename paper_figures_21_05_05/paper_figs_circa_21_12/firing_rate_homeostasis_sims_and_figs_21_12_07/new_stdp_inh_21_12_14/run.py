@@ -35,9 +35,9 @@ parser.add_argument('--rng_seed', metavar='r', type=int, nargs=1)
 parser.add_argument('--load_run', metavar='l', type=str, nargs=1)
 parser.add_argument('--dropout_per', metavar='d', type=float, nargs=1)
 parser.add_argument('--drop_iter', metavar='di', type=int, nargs=1)
-parser.add_argument('--tau_stdp_ei', metavar='ts_ei', type=float, nargs=1)
-parser.add_argument('--t_r_i', metavar='tri', type=float, nargs=1)
-parser.add_argument('--stdp_dep', metavar='s_dep', type=float, nargs=1)
+# parser.add_argument('--tau_stdp_ei', metavar='ts_ei', type=float, nargs=1)
+# parser.add_argument('--t_r_i', metavar='tri', type=float, nargs=1)
+# parser.add_argument('--stdp_dep', metavar='s_dep', type=float, nargs=1)
 
 args = parser.parse_args()
 
@@ -59,7 +59,7 @@ M = Generic(
     G_L_I=.4e-3, 
     E_L_I=-.057,
     V_TH_I=-.043,
-    T_R_I=args.t_r_i[0],
+    T_R_I=1e-3,
     E_R_I=-.057, # reset voltage (V)
     
     # syn rev potentials and decay times
@@ -115,7 +115,7 @@ M = Generic(
 
     # Synaptic plasticity params
     TAU_STDP_PAIR_EE=30e-3,
-    TAU_STDP_PAIR_EI=args.tau_stdp_ei[0],
+    TAU_STDP_PAIR_EI=10e-3,
 
     SINGLE_CELL_FR_SETPOINT_MIN=10,
     SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
@@ -139,7 +139,7 @@ M.KERNEL_PAIR_EE = np.exp(-np.arange(M.CUT_IDX_TAU_PAIR_EE) * S.DT / M.TAU_STDP_
 M.CUT_IDX_TAU_PAIR_EI = int(2 * M.TAU_STDP_PAIR_EI / S.DT)
 kernel_base_ei = np.arange(2 * M.CUT_IDX_TAU_PAIR_EI + 1) - M.CUT_IDX_TAU_PAIR_EI
 M.KERNEL_PAIR_EI = np.exp(-1 * np.abs(kernel_base_ei) * S.DT / M.TAU_STDP_PAIR_EI).astype(float)
-M.KERNEL_PAIR_EI[:M.CUT_IDX_TAU_PAIR_EI] *= args.stdp_dep[0]
+M.KERNEL_PAIR_EI[:M.CUT_IDX_TAU_PAIR_EI] *= -0.8
 
 M.DROPOUT_MAX_IDX = M.N_EXC + M.N_SILENT
 
