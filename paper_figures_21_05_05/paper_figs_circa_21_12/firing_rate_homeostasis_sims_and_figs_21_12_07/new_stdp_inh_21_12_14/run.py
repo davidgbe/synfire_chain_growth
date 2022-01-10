@@ -110,7 +110,7 @@ M = Generic(
     SET_FR_FLAG=(args.load_run is None or args.load_run[0] is None),
     E_SINGLE_FR_TRIALS=(1, 3),
     I_SINGLE_FR_TRIALS=(6, 11),
-    POP_FR_TRIALS=(11, 30),
+    POP_FR_TRIALS=(1900, 1920),
     E_STDP_START=4,
 
     # Synaptic plasticity params
