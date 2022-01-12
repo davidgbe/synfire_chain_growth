@@ -108,9 +108,9 @@ M = Generic(
     # POP_FR_TRIALS=(61, 81),
 
     SET_FR_FLAG=(args.load_run is None or args.load_run[0] is None),
-    E_SINGLE_FR_TRIALS=(1, 3),
+    E_SINGLE_FR_TRIALS=(0, 1),
     I_SINGLE_FR_TRIALS=(6, 11),
-    POP_FR_TRIALS=(1900, 1920),
+    POP_FR_TRIALS=(50, 70),
     E_STDP_START=4,
 
     # Synaptic plasticity params
@@ -120,7 +120,7 @@ M = Generic(
     SINGLE_CELL_FR_SETPOINT_MIN=10,
     SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
     SINGLE_CELL_LINE_ATTR=args.fr_single_line_attr[0],
-    SINGLE_CELL_LINE_ATTR_WIDTH=4,
+    SINGLE_CELL_LINE_ATTR_WIDTH=6,
     ETA=0.3,
     ALPHA_1=args.alpha_1[0], #3e-2
     ALPHA_2=args.alpha_2[0],
@@ -592,14 +592,14 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     # E POPULATION-LEVEL FIRING RATE RULE
                     fr_pop_update = 0
 
-                    if i_e >= m.POP_FR_TRIALS[0] and i_e < m.POP_FR_TRIALS[1]:
+                    if i_e >= m.POP_FR_TRIALS[0] and i_e < m.POP_FR_TRIALS[1] and m.SET_FR_FLAG:
                         if e_cell_pop_fr_setpoint is None:
                             e_cell_pop_fr_setpoint = np.sum(spks_for_e_cells)
                         else:
                             e_cell_pop_fr_setpoint += np.sum(spks_for_e_cells)
                     elif i_e == m.POP_FR_TRIALS[1]:
                         e_cell_pop_fr_setpoint = e_cell_pop_fr_setpoint / (m.POP_FR_TRIALS[1] - m.POP_FR_TRIALS[0])
-                    elif i_e > m.POP_FR_TRIALS[1]:
+                    elif i_e > m.POP_FR_TRIALS[1] and m.SET_FR_FLAG:
                         fr_pop_diff = e_cell_pop_fr_setpoint - np.sum(spks_for_e_cells)
                         fr_pop_update = (-1 + np.exp(fr_pop_diff / 60)) / (1 + np.exp(fr_pop_diff / 60))
                         print(m.GAMMA * fr_pop_update)
@@ -763,7 +763,7 @@ for i in range(1):
     w_r_i = None
     e_cell_fr_setpoints = None
     if args.load_run is not None and args.load_run[0] is not '':
-        loaded_data = load_previous_run(os.path.join('./robustness', args.load_run[0]), 425)
+        loaded_data = load_previous_run(os.path.join('./robustness', args.load_run[0]), 225)
         w_r_e = loaded_data['w_r_e'].toarray()
         w_r_i = loaded_data['w_r_i'].toarray()
         e_cell_fr_setpoints = loaded_data['e_cell_fr_setpoints'][0]

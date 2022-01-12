@@ -7,7 +7,7 @@
 #SBATCH -A stf
 
 #SBATCH --nodes=1
-#SBATCH --time=24:00:00
+#SBATCH --time=10:00:00
 #SBATCH --ntasks=10
 #SBATCH --mem=100G
 
@@ -21,7 +21,7 @@ echo $CURRDIR
 cd //gscratch/stf/davidgbe/compneuro
 source davidgbe-env/bin/activate
 cd $CURRDIR
-python run.py --title pop_stdp_drop_2_TITLE --alpha_1 6e-2 --alpha_2 0.5e-2 --beta 1e-3 --gamma GAMMA --fr_single_line_attr 0 --rng_seed SEED --dropout_per 0.5 --load_run LOADED_RUN_NAME &
+python run.py --title pop_stdp_drop_3_TITLE --alpha_1 6e-2 --alpha_2 0.5e-2 --beta 1e-2 --gamma GAMMA --fr_single_line_attr 1 --rng_seed SEED --dropout_per 0.5 --load_run LOADED_RUN_NAME --drop_iter 80 &
 wait
 deactivate
 
