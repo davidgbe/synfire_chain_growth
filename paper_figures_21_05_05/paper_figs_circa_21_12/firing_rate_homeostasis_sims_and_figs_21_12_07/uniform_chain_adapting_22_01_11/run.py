@@ -94,8 +94,8 @@ M = Generic(
     W_E_I_R_SUMMED_MAX=13 * 10e-5,
     W_I_E_R=0.5e-5,
     W_A=0,
-    W_E_E_R=0.26 * 0.004 * 0.7,
-    W_E_E_R_MAX=0.26 * 0.004 * 20 * 0.7,
+    W_E_E_R=0.26 * 0.004 * 0.9,
+    W_E_E_R_MAX=0.26 * 0.004 * 20 * 0.9,
     W_MIN=1e-8,
 
     # Dropout params
@@ -120,7 +120,7 @@ M = Generic(
     SINGLE_CELL_FR_SETPOINT_MIN=10,
     SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
     SINGLE_CELL_LINE_ATTR=args.fr_single_line_attr[0],
-    SINGLE_CELL_LINE_ATTR_WIDTH=4,
+    SINGLE_CELL_LINE_ATTR_WIDTH=6,
     ETA=0.3,
     ALPHA_1=args.alpha_1[0], #3e-2
     ALPHA_2=args.alpha_2[0],
@@ -349,6 +349,8 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     t_s={'E': M.T_E, 'I': M.T_E, 'A': M.T_A},
                     w_r=w_r_copy,
                     w_u=w_u,
+                    a=1e-5,
+                    t_a=1e-2,
                     plasticity_indices=np.arange(m.N_EXC),
                     W_max=m.W_E_E_R_MAX,
                     m=m.M,

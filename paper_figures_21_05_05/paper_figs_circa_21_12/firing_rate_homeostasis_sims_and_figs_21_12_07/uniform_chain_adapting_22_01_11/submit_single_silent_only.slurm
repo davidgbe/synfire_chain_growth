@@ -1,13 +1,13 @@
 #!/bin/bash
 
 ## Presets
-#SBATCH --job-name=pop_single_silent
+#SBATCH --job-name=single_silent_only
 
 #SBATCH -p stf
 #SBATCH -A stf
 
 #SBATCH --nodes=1
-#SBATCH --time=10:00:00
+#SBATCH --time=24:00:00
 #SBATCH --ntasks=10
 #SBATCH --mem=100G
 
@@ -21,7 +21,7 @@ echo $CURRDIR
 cd //gscratch/stf/davidgbe/compneuro
 source davidgbe-env/bin/activate
 cd $CURRDIR
-python run.py --title settledrop_TITLE --alpha_1 ALPHA_1 --alpha_2 ALPHA_2 --beta BETA --gamma GAMMA --fr_single_line_attr FR_LINE_ATTR --rng_seed SEED --dropout_per DROP_SEV --drop_iter 2050 &
+python run.py --title tau_ei_stdp_10ms_TITLE --alpha_1 6e-2 --alpha_2 0.5e-2 --beta BETA --gamma 0 --fr_single_line_attr 0 --rng_seed SEED --dropout_per 0.5 --tau_stdp_ei T_S_EI --t_r_i TRI --stdp_dep STDP_EI_DEP --drop_iter 10000 &
 wait
 deactivate
 
