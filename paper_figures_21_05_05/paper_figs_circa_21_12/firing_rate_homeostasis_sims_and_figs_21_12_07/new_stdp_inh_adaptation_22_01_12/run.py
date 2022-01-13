@@ -599,7 +599,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                             e_cell_pop_fr_setpoint += np.sum(spks_for_e_cells)
                     elif i_e == m.POP_FR_TRIALS[1]:
                         e_cell_pop_fr_setpoint = e_cell_pop_fr_setpoint / (m.POP_FR_TRIALS[1] - m.POP_FR_TRIALS[0])
-                    elif i_e > m.POP_FR_TRIALS[1] and m.SET_FR_FLAG:
+                    elif i_e > m.POP_FR_TRIALS[1]:
                         fr_pop_diff = e_cell_pop_fr_setpoint - np.sum(spks_for_e_cells)
                         fr_pop_update = (-1 + np.exp(fr_pop_diff / 60)) / (1 + np.exp(fr_pop_diff / 60))
                         print(m.GAMMA * fr_pop_update)
