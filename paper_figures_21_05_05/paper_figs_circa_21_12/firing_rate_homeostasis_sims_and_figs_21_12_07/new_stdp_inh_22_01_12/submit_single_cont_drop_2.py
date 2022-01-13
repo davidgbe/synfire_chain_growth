@@ -5,10 +5,10 @@ from utils.file_io import *
 
 base_path = os.curdir
 scripts = [
-	'submit_single_cont_drop.slurm',
+	'submit_single_cont_drop_2.slurm',
 ]
 drop_sev = 0.5
-load_run_name = ['settledrop', 'FR_LINE_ATTR_0']
+load_run_name = ['settledrop', 'FR_LINE_ATTR_1']
 
 ### functions
 

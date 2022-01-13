@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## Presets
-#SBATCH --job-name=cont_drop_1
+#SBATCH --job-name=cont_drop_2
 
 #SBATCH -p stf
 #SBATCH -A stf
@@ -21,7 +21,7 @@ echo $CURRDIR
 cd //gscratch/stf/davidgbe/compneuro
 source davidgbe-env/bin/activate
 cd $CURRDIR
-python run.py --title cont_drop_1_TITLE --alpha_1 6e-2 --alpha_2 0.5e-2 --beta 1e-2 --gamma GAMMA --fr_single_line_attr 0 --rng_seed SEED --dropout_per 0.5 --load_run LOADED_RUN_NAME --drop_iter 50 &
+python run.py --title cont_drop_2_TITLE --alpha_1 6e-2 --alpha_2 0.5e-2 --beta 1e-2 --gamma GAMMA --fr_single_line_attr 1 --rng_seed SEED --dropout_per 0.5 --load_run LOADED_RUN_NAME --drop_iter 50 &
 wait
 deactivate
 

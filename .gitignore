@@ -8,7 +8,7 @@
 **/*.zip
 **/*.z*
 **/*.out
-**/*[0-9].slurm
+**/*[0-9][0-9][0-9][0-9].slurm
 **/parsed_data*
 **/sampled_cell_rasters/*
 **/*.png
