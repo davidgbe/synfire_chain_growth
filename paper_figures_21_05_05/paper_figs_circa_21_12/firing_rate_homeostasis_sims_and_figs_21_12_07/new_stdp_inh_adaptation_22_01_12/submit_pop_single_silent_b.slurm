@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## Presets
-#SBATCH --job-name=pop_single_silent
+#SBATCH --job-name=pop_single_adapting
 
 #SBATCH -p stf
 #SBATCH -A stf
