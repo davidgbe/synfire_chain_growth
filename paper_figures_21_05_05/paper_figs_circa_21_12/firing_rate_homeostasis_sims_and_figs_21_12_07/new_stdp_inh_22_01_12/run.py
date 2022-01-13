@@ -89,13 +89,13 @@ M = Generic(
     I_E_CON_PROB=0.6,
 
     # Weights
-    W_E_I_R=6e-5,
+    W_E_I_R=2.6e-5,
     W_E_I_R_MAX=10e-5,
-    W_E_I_R_SUMMED_MAX=13 * 10e-5,
-    W_I_E_R=0.5e-5,
+    W_E_I_R_SUMMED_MAX=12 * 10e-5,
+    W_I_E_R=1.1e-5,
     W_A=0,
-    W_E_E_R=0.26 * 0.004 * 0.7,
-    W_E_E_R_MAX=0.26 * 0.004 * 20 * 0.7,
+    W_E_E_R=0.26 * 0.004 * 0.8,
+    W_E_E_R_MAX=0.26 * 0.004 * 20 * 0.8,
     W_MIN=1e-8,
 
     # Dropout params
@@ -108,10 +108,10 @@ M = Generic(
     # POP_FR_TRIALS=(61, 81),
 
     SET_FR_FLAG=(args.load_run is None or args.load_run[0] is None),
-    E_SINGLE_FR_TRIALS=(0, 1),
+    E_SINGLE_FR_TRIALS=(2, 10),
     I_SINGLE_FR_TRIALS=(6, 11),
-    POP_FR_TRIALS=(50, 70),
-    E_STDP_START=4,
+    POP_FR_TRIALS=(2900, 2950),
+    E_STDP_START=11,
 
     # Synaptic plasticity params
     TAU_STDP_PAIR_EE=30e-3,

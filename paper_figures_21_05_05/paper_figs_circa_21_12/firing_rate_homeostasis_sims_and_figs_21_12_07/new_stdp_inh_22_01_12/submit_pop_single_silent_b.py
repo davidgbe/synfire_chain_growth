@@ -1,16 +1,12 @@
 import os
 from collections import OrderedDict
 import functools
-from utils.file_io import *
 
 base_path = os.curdir
 scripts = [
-	'submit_single_cont_drop_pop.slurm',
+	'submit_pop_single_silent_b.slurm',
 ]
 drop_sev = 0.5
-load_run_name = 'settle__DROP_SEV_0.5_BETA_0.01'
-
-### functions
 
 def replace_all(line, repl_dict):
 	s = line
@@ -27,9 +23,6 @@ def replace_all(line, repl_dict):
 def format_title(params):
 	title = ''
 	for k, v in params.items():
-		if k == 'LOADED_RUN_NAME':
-			v = v[v.find('_'):]
-			v = 'initial' + v
 		title += ('_' + k + '_' + v)
 	return title
 
@@ -79,26 +72,21 @@ def pad_zeros(to_pad, length):
 		padded = '0' + padded
 	return padded
 
-### operating code
-
 batch_size = 10
 
 params = OrderedDict()
-
-if type(load_run_name) is list:
-    all_dirs = filter_list_by_name_frags(all_in_dir('./robustness'), load_run_name)
-else:
-    all_dirs = filter_list_by_name_frags(all_in_dir('./robustness'), [load_run_name])
-
-params['LOADED_RUN_NAME'] = [d for d in all_dirs]
+params['SEED'] = [str(i) for i in range(2060, 2070)]
+params['ALPHA_1'] = [ str(6e-2) ]
+params['ALPHA_2'] = [ str(0.5e-2) ]
+params['BETA'] = [ str(1e-2) ]
 params['GAMMA'] = [ str(0), str(1e-2) ]
-params['SEED'] = [str(2000)]
-print(params)
+params['DROP_SEV'] = [str(0.5)]
+params['FR_LINE_ATTR'] = [ str(0), str(1) ]
 
-# for key in params.keys():
-# 	if key == 'SEED' or key == 'LOADED_RUN_NAME':
-# 		continue
-# 	params[key] = [str(v[1]) for v in iter_range(params[key][0], params[key][1])]
+for key in params.keys():
+	if key == 'SEED' or type(params[key][0]) is str:
+		continue
+	params[key] = [str(v[1]) for v in iter_range(params[key][0], params[key][1])]
 
 all_values = cartesian(*(params.values()))
 n_scripts = len(all_values[0])
@@ -127,7 +115,6 @@ for src_name in scripts:
 						augmented_params[v] = all_values[param_idx][n + batch_idx]
 
 					augmented_params['TITLE'] = format_title(augmented_params)
-
 					line_replaced = replace_all(line, augmented_params)
 					dst.write(line_replaced)
 			else:
