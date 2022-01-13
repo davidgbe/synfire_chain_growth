@@ -96,7 +96,7 @@ params['GAMMA'] = [ str(0), str(1e-2) ]
 print(params)
 
 for key in params.keys():
-	if key == 'SEED' or key == 'LOADED_RUN_NAME':
+	if key == 'SEED' or key == 'LOADED_RUN_NAME' or type(params[key][0]) is str:
 		continue
 	params[key] = [str(v[1]) for v in iter_range(params[key][0], params[key][1])]
 
