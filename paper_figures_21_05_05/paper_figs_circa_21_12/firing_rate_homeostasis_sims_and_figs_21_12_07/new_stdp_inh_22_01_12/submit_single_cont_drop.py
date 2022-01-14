@@ -8,7 +8,7 @@ scripts = [
 	'submit_single_cont_drop.slurm',
 ]
 drop_sev = 0.5
-load_run_name = ['settledrop', 'FR_LINE_ATTR_0']
+load_run_name = ['settledrop', 'FR_LINE_ATTR_0', 'GAMMA_0_']
 
 ### functions
 
