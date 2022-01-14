@@ -5,10 +5,10 @@ from utils.file_io import *
 
 base_path = os.curdir
 scripts = [
-	'submit_single_cont_drop_pop.slurm',
+	'submit_single_cont_drop_2.slurm',
 ]
 drop_sev = 0.5
-load_run_name = 'settle__DROP_SEV_0.5_BETA_0.01'
+load_run_name = ['settledrop', 'FR_LINE_ATTR_1', 'GAMMA_0_']
 
 ### functions
 
@@ -91,14 +91,14 @@ else:
     all_dirs = filter_list_by_name_frags(all_in_dir('./robustness'), [load_run_name])
 
 params['LOADED_RUN_NAME'] = [d for d in all_dirs]
-params['GAMMA'] = [ str(0), str(1e-2) ]
 params['SEED'] = [str(2000)]
+params['GAMMA'] = [ str(0), str(1e-2) ]
 print(params)
 
-# for key in params.keys():
-# 	if key == 'SEED' or key == 'LOADED_RUN_NAME':
-# 		continue
-# 	params[key] = [str(v[1]) for v in iter_range(params[key][0], params[key][1])]
+for key in params.keys():
+	if key == 'SEED' or key == 'LOADED_RUN_NAME' or type(params[key][0]) is str:
+		continue
+	params[key] = [str(v[1]) for v in iter_range(params[key][0], params[key][1])]
 
 all_values = cartesian(*(params.values()))
 n_scripts = len(all_values[0])

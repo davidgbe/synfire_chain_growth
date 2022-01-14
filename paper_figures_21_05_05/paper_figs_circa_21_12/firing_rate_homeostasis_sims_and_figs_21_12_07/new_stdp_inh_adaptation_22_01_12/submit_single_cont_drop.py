@@ -8,7 +8,7 @@ scripts = [
 	'submit_single_cont_drop.slurm',
 ]
 drop_sev = 0.5
-load_run_name = 'single_only'
+load_run_name = ['settledrop', 'FR_LINE_ATTR_0', 'GAMMA_0_']
 
 ### functions
 
@@ -91,11 +91,12 @@ else:
     all_dirs = filter_list_by_name_frags(all_in_dir('./robustness'), [load_run_name])
 
 params['LOADED_RUN_NAME'] = [d for d in all_dirs]
-params['SEED'] = [str(s) for s in range(2000, 2003)]
+params['SEED'] = [str(2000)]
+params['GAMMA'] = [ str(0), str(1e-2) ]
 print(params)
 
 for key in params.keys():
-	if key == 'SEED' or key == 'LOADED_RUN_NAME':
+	if key == 'SEED' or key == 'LOADED_RUN_NAME' or type(params[key][0]) is str:
 		continue
 	params[key] = [str(v[1]) for v in iter_range(params[key][0], params[key][1])]
 
