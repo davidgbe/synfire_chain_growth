@@ -79,7 +79,7 @@ params['SEED'] = [str(i) for i in range(2060, 2110)]
 params['ALPHA_1'] = [ str(6e-2) ]
 params['ALPHA_2'] = [ str(0.5e-2) ]
 params['BETA'] = [ str(5e-3) ]
-params['GAMMA'] = [str(1e-2) ]
+params['GAMMA'] = [ str(1e-2) ]
 params['DROP_SEV'] = [str(0.5)]
 params['FR_LINE_ATTR'] = [ str(0), str(1) ]
 
