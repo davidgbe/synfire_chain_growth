@@ -74,8 +74,8 @@ M = Generic(
     DRIVING_HZ=2, # 2 Hz lambda Poisson input to system
     N_DRIVING_CELLS=10,
     PROJECTION_NUM=10,
-    INPUT_STD=1e-3,
-    BURST_T=1.5e-3,
+    INPUT_STD=2e-3,
+    BURST_T=2e-3,
     INPUT_DELAY=50e-3,
     
     # OTHER INPUTS
@@ -85,12 +85,12 @@ M = Generic(
     # Connection probabilities
     CON_PROB_FF=0.8,
     CON_PROB_R=0.,
-    E_I_CON_PROB=0.025,
+    E_I_CON_PROB=0.015,
     I_E_CON_PROB=0.6,
 
     # Weights
-    W_E_I_R=5e-5,
-    W_E_I_R_MAX=10e-5,
+    W_E_I_R=5e-5 * 2.5/1.5,
+    W_E_I_R_MAX=15e-5,
     W_I_E_R=0.5e-5,
     W_A=2.5e-4,
     W_E_E_R=0.26 * 0.004 * 1.,
@@ -329,7 +329,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 np.concatenate([np.random.poisson(m.DRIVING_HZ * S.DT, size=(len(t), 1)) for i in range(m.N_DRIVING_CELLS)], axis=1)
                 spks_u = copy(spks_u_base)
                 spks_u[:, :m.N_DRIVING_CELLS] = np.zeros((len(t), m.N_DRIVING_CELLS))
-                burst_t = np.arange(0, 5 * int(m.BURST_T / S.DT), int(m.BURST_T / S.DT))
+                burst_t = np.arange(0, 3 * int(m.BURST_T / S.DT), int(m.BURST_T / S.DT))
 
                 for t_idx, driving_cell_idx in zip(*activation_times.nonzero()):
                     input_noise_t = np.array(np.random.normal(scale=m.INPUT_STD / S.DT), dtype=int)
