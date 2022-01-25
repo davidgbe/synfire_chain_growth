@@ -94,7 +94,7 @@ M = Generic(
     W_I_E_R=0.5e-5,
     W_A=2.5e-4,
     W_E_E_R=0.26 * 0.004 * 1.,
-    W_E_E_R_MAX=0.26 * 0.004 * 20 * 1.,
+    W_E_E_R_MAX=0.26 * 0.004 * 30 * 1.,
     W_MIN=1e-8,
 
     # Dropout params
@@ -102,15 +102,11 @@ M = Generic(
     DROPOUT_ITER=args.drop_iter[0],
     DROPOUT_SEV=args.dropout_per[0],
 
-    # E_SINGLE_FR_TRIALS=(1, 21),
-    # I_SINGLE_FR_TRIALS=(31, 51),
-    # POP_FR_TRIALS=(61, 81),
-
     SET_FR_FLAG=(args.load_run is None or args.load_run[0] is None),
-    E_SINGLE_FR_TRIALS=(2, 10),
+    E_SINGLE_FR_TRIALS=(2, 3),
     I_SINGLE_FR_TRIALS=(6, 11),
-    POP_FR_TRIALS=(1980, 1999),
-    E_STDP_START=11,
+    POP_FR_TRIALS=(450, 490),
+    E_STDP_START=100,
 
     # Synaptic plasticity params
     TAU_STDP_PAIR_EE=30e-3,
@@ -127,7 +123,7 @@ M = Generic(
     GAMMA=args.gamma[0], #1e-4,
 )
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.1e-3, T=300e-3, EPOCHS=10000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.1e-3, T=200e-3, EPOCHS=10000)
 np.random.seed(S.RNG_SEED)
 
 M.W_U_E = 4e-4
@@ -392,7 +388,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                                 spk_times_for_cell = np.nonzero(rasters_for_cell_type[rendition_num][:, cell_idx])[0]
                                 ax.scatter(spk_times_for_cell * S.DT * 1000, (base_idx + cell_idx * len(rasters_for_cell_type) + rendition_num) * np.ones(len(spk_times_for_cell)), s=3, marker='|')
                         base_idx += sampled_trial_number * rasters_for_cell_type[0].shape[1]
-                    ax.set_xlim(0, 300)
+                    ax.set_xlim(0, 160)
                     ax.set_xlabel('Time (ms)')
                     sampled_e_cell_rasters = []
                     sampled_i_cell_rasters = []
@@ -573,6 +569,8 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         e_cell_fr_setpoints = e_cell_fr_setpoints / (m.E_SINGLE_FR_TRIALS[1] - m.E_SINGLE_FR_TRIALS[0])
                         if m.SINGLE_CELL_LINE_ATTR == 1:
                             e_cell_fr_setpoints[e_cell_fr_setpoints < (m.SINGLE_CELL_LINE_ATTR_WIDTH/2) ] = m.SINGLE_CELL_LINE_ATTR_WIDTH/2
+                        e_cell_fr_setpoints = 5 * np.ones(len(e_cell_fr_setpoints
+                        )) 
                         where_fr_is_0 = (e_cell_fr_setpoints == 0)
                         if m.SINGLE_CELL_LINE_ATTR == 2:
                             e_cell_fr_setpoints += m.SINGLE_CELL_LINE_ATTR_WIDTH/2
