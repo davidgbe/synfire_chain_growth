@@ -345,12 +345,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     t_s={'E': M.T_E, 'I': M.T_E, 'A': M.T_A},
                     w_r=w_r_copy,
                     w_u=w_u,
-                    plasticity_indices=np.arange(m.N_EXC),
-                    W_max=m.W_E_E_R_MAX,
-                    m=m.M,
-                    output=False,
-                    output_freq=100000,
-                    weight_update=False,
                 )
 
                 clamp = Generic(v={0: e_l}, spk={})

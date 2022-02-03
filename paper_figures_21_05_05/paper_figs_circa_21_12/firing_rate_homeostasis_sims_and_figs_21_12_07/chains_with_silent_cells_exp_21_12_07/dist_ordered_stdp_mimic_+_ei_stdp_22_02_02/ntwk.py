@@ -16,7 +16,7 @@ cc = np.concatenate
 class LIFNtwkG(object):
     """Network of leaky integrate-and-fire neurons with *conductance-based* synapses."""
     
-    def __init__(self, c_m, g_l, e_l, v_th, v_r, t_r, e_s, t_s, w_r, w_u, sparse=True):
+    def __init__(self, c_m, g_l, e_l, v_th, v_r, t_r, e_s, t_s, w_r, w_u, pairwise_spk_delays, sparse=True):
         # ntwk size
         n = next(iter(w_r.values())).shape[0]
         
@@ -47,9 +47,10 @@ class LIFNtwkG(object):
             self.w_u = w_u
 
         self.syns = list(self.e_s.keys())
+        self.pairwise_spk_delays = pairwise_spk_delays
 
 
-    def run(self, dt, clamp, i_ext, output_dir_name, dropouts, m, repairs=[], spks_u=None):
+    def run(self, dt, clamp, i_ext, spks_u=None):
         """
         Run simulation.
         
@@ -72,7 +73,6 @@ class LIFNtwkG(object):
         t_s = self.t_s
         w_r = self.w_r
         w_u = self.w_u
-
         
         # make data storage arrays
         gs = {syn: np.nan * np.zeros((n_t, n)) for syn in syns}
@@ -89,10 +89,16 @@ class LIFNtwkG(object):
             v={int(round(t_/dt)): f_v for t_, f_v in tmp_v},
             spk={int(round(t_/dt)): f_spk for t_, f_spk in tmp_spk})
 
-        avg_initial_input_per_cell = np.mean(self.w_r['E'][:m.N_EXC, :m.N_EXC].sum(axis=1))
+        k = np.concatenate([np.arange(n) for i in range(n)]).astype(int)
+
+        spk_emit_times = -self.pairwise_spk_delays
         
         # loop over timesteps
         for t_ctr in range(len(i_ext)):
+
+            spk_emit_times += 1
+            spk_emit_times_copy = copy(spk_emit_times)
+            spk_emit_times_copy[spk_emit_times_copy < 0] = t_ctr
             
             # update conductances
             for syn in syns:
@@ -102,7 +108,18 @@ class LIFNtwkG(object):
                     g = gs[syn][t_ctr-1, :]
                     # get weighted spike inputs
                     ## recurrent
-                    inp = w_r[syn].dot(spks[t_ctr-1, :])
+                    trimmed_spks = spks[spk_emit_times_copy.min():, :]
+
+                    spiking_indices = np.arange(n)[trimmed_spks.sum(axis=0) > 0]
+                    print(indices)
+
+
+
+
+                    x = trimmed_spks[(spk_emit_times_copy.flatten() - spk_emit_times_copy.min()), k]
+                    z = x.reshape(n, n)
+                    inp = (w_r[syn].multiply(z)).sum(axis=1).reshape(n)
+
                     ## upstream
                     if spks_u is not None:
                         if syn in w_u:
@@ -118,7 +135,11 @@ class LIFNtwkG(object):
                 v = vs[t_ctr-1, :]
                 # get total current input
                 i_total = -g_l*(v - e_l)  # leak
-                i_total += np.sum([-gs[syn][t_ctr, :]*(v - e_s[syn]) for syn in syns], axis=0)  # synaptic
+                for syn in syns:
+                    if syn != 'A':
+                        i_total += -gs[syn][t_ctr, :]*(v - e_s[syn])
+                    else:
+                        i_total -= gs[syn][t_ctr, :]
                 i_total += i_ext[t_ctr]  # external
                 
                 # update v

@@ -49,7 +49,7 @@ class LIFNtwkG(object):
         self.syns = list(self.e_s.keys())
 
 
-    def run(self, dt, clamp, i_ext, output_dir_name, dropouts, m, repairs=[], spks_u=None):
+    def run(self, dt, clamp, i_ext, spks_u=None):
         """
         Run simulation.
         
@@ -72,7 +72,6 @@ class LIFNtwkG(object):
         t_s = self.t_s
         w_r = self.w_r
         w_u = self.w_u
-
         
         # make data storage arrays
         gs = {syn: np.nan * np.zeros((n_t, n)) for syn in syns}
@@ -88,8 +87,6 @@ class LIFNtwkG(object):
         clamp = Generic(
             v={int(round(t_/dt)): f_v for t_, f_v in tmp_v},
             spk={int(round(t_/dt)): f_spk for t_, f_spk in tmp_spk})
-
-        avg_initial_input_per_cell = np.mean(self.w_r['E'][:m.N_EXC, :m.N_EXC].sum(axis=1))
         
         # loop over timesteps
         for t_ctr in range(len(i_ext)):
@@ -118,7 +115,11 @@ class LIFNtwkG(object):
                 v = vs[t_ctr-1, :]
                 # get total current input
                 i_total = -g_l*(v - e_l)  # leak
-                i_total += np.sum([-gs[syn][t_ctr, :]*(v - e_s[syn]) for syn in syns], axis=0)  # synaptic
+                for syn in syns:
+                    if syn != 'A':
+                        i_total += -gs[syn][t_ctr, :]*(v - e_s[syn])
+                    else:
+                        i_total -= gs[syn][t_ctr, :]
                 i_total += i_ext[t_ctr]  # external
                 
                 # update v
