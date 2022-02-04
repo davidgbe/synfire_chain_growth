@@ -189,7 +189,7 @@ def generate_exc_ff_chain(m):
             connected_cells_for_layer = mat_1_if_under_val(gamma * M.CON_PROBS_FF[i], (m.PROJECTION_NUM,))
             strong_weight_gaussian = gaussian((m.PROJECTION_NUM,), w, 0.2 * w) * np.exp(-i / 4)
             weak_weight_guassian = small_syn_scaling_factor * w * np.random.exponential(scale=4, size=(m.PROJECTION_NUM,))
-            incoming_weights = np.where(all_syn_props[(l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] * syn_prop > 0.25, strong_weight_gaussian, weak_weight_guassian)
+            incoming_weights = np.where(all_syn_props[(l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] * syn_prop > 0.35, strong_weight_gaussian, weak_weight_guassian)
             incoming_weights[connected_cells_for_layer == 0] = 0
 
             cons_for_cell[0, (l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] = incoming_weights
@@ -619,7 +619,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                             e_diffs[e_diffs > 0] = 0
                         fr_update_e = e_diffs.reshape(e_diffs.shape[0], 1) * np.ones((m.N_EXC + m.N_SILENT, m.N_EXC + m.N_SILENT)).astype(float)
 
-                        e_cell_fr_setpoints += m.GAMMA * 2 / 5 * np.sqrt(e_cell_fr_setpoints * (5 - e_cell_fr_setpoints)) * fr_pop_update
+                        e_cell_fr_setpoints += m.GAMMA * 2 / 5 * np.sqrt(e_cell_fr_setpoints * (5 - e_cell_fr_setpoints)) * fr_pop_update + 1e-4 * 5 * np.random.rand(len(e_cell_fr_setpoints))
                         e_cell_fr_setpoints[e_cell_fr_setpoints < 0] = 0
                         e_cell_fr_setpoints[e_cell_fr_setpoints > 5] = 5
 
