@@ -176,7 +176,7 @@ def generate_exc_ff_chain(m):
 
         cons_for_cell = np.zeros((1, m.N_EXC))
 
-        small_syn_scaling_factor = 0.1 * (1 - syn_prop)
+        small_syn_scaling_factor = 0.05 * (1 - syn_prop)
 
         ### For a cell with 'synfire_proportion' alpha, we would like alpha * total_incoming_cons to be very synfire
         ### Calculation of feed-forward probability scaling coefficient 'gamma':
@@ -189,7 +189,7 @@ def generate_exc_ff_chain(m):
             connected_cells_for_layer = mat_1_if_under_val(gamma * M.CON_PROBS_FF[i], (m.PROJECTION_NUM,))
             strong_weight_gaussian = gaussian((m.PROJECTION_NUM,), w, 0.2 * w) * np.exp(-i / 4)
             weak_weight_guassian = small_syn_scaling_factor * w * np.random.exponential(scale=4, size=(m.PROJECTION_NUM,))
-            incoming_weights = np.where(all_syn_props[(l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] * syn_prop > 0.35, strong_weight_gaussian, weak_weight_guassian)
+            incoming_weights = np.where(all_syn_props[(l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] * syn_prop > 0.5, strong_weight_gaussian, weak_weight_guassian)
             incoming_weights[connected_cells_for_layer == 0] = 0
 
             cons_for_cell[0, (l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] = incoming_weights

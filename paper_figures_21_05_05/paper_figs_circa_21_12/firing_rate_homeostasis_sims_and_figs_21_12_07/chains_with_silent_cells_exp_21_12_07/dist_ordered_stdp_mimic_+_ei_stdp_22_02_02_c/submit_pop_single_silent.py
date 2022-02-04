@@ -79,7 +79,7 @@ params['SEED'] = [str(i) for i in range(2090, 2140)]
 params['ALPHA_1'] = [ str(3e-2) ]
 params['BETA'] = [ str(1e-3) ]
 params['GAMMA'] = [ str(1e-1) ]
-params['SYN_PROP_DIST'] = [ str(0.8) ]
+params['SYN_PROP_DIST'] = [ str(0.5) ]
 params['DROP_SEV'] = [str(0.5)]
 
 for key in params.keys():
