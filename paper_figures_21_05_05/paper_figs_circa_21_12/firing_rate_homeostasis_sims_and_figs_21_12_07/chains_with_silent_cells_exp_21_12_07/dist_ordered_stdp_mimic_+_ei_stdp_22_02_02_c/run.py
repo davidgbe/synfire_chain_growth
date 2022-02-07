@@ -28,6 +28,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--title', metavar='T', type=str, nargs=1)
 parser.add_argument('--alpha', metavar='a', type=float, nargs=1)
 parser.add_argument('--beta', metavar='b', type=float, nargs=1)
+parser.add_argument('--beta_2', metavar='b2', type=float, nargs=1)
 parser.add_argument('--gamma', metavar='c', type=float, nargs=1)
 parser.add_argument('--fr_single_line_attr', metavar='s', type=int, nargs=1)
 parser.add_argument('--rng_seed', metavar='r', type=int, nargs=1)
@@ -94,7 +95,7 @@ M = Generic(
     W_I_E_R=0.25e-5,
     W_A=2.5e-6, #2.5e-6,
     W_E_E_R=0.26 * 0.004 * 1.,
-    W_E_E_R_MAX=0.26 * 0.004 * 30 * 1.,
+    W_E_E_R_MAX=0.26 * 0.004 * 10 * 1.,
     W_MIN=1e-8,
 
     # Dropout params
@@ -104,9 +105,9 @@ M = Generic(
 
     SET_FR_FLAG=(args.load_run is None or args.load_run[0] is None),
     E_SINGLE_FR_TRIALS=(1, 10),
-    I_SINGLE_FR_TRIALS=(9, 10),
-    POP_FR_TRIALS=(90, 100),
-    E_STDP_START=150,
+    POP_FR_TRIALS=(300, 310),
+    EE_STDP_START=11,
+    EI_STDP_START=311,
 
     # Synaptic plasticity params
     TAU_STDP_PAIR_EE=30e-3,
@@ -119,6 +120,7 @@ M = Generic(
     ETA=0.3,
     ALPHA=args.alpha[0], #3e-2
     BETA=args.beta[0], #1e-3,
+    BETA_2=args.beta_2[0], #1e-3,
     GAMMA=args.gamma[0], #1e-4,
 )
 
@@ -142,7 +144,7 @@ M.DROPOUT_MAX_IDX = M.N_EXC
 M.INITIAL_SUMMED_WEIGHT = M.MEAN_N_CONS_PER_CELL * M.W_E_E_R / M.PROJECTION_NUM
 
 if not M.SET_FR_FLAG:
-    M.E_STDP_START = M.E_SINGLE_FR_TRIALS[1]
+    M.EE_STDP_START = M.E_SINGLE_FR_TRIALS[1]
 
 ## SMLN
 
@@ -287,6 +289,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
         ]),
     }
 
+    ee_connectivity = np.where(w_r_e[:(m.N_EXC), :(m.N_EXC)], 1, 0)
     ei_connectivity = np.where(w_r_e[m.N_EXC:(m.N_EXC + m.N_INH), :(m.N_EXC)], 1, 0)
     summed_i_cell_input_initial = w_r['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC].sum(axis=1)
 
@@ -524,14 +527,15 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                             return spks[-1]
 
                     # STDP FOR E CELLS: put in pairwise STDP on filtered_spks_for_e_cells
-                    stdp_burst_pair = 0
+                    stdp_burst_pair_e_e_plus = 0
+                    stdp_burst_pair_e_e_minus = 0
                     stdp_burst_pair_e_i_plus = 0
                     stdp_burst_pair_e_i_minus = 0
 
-                    if i_e >= m.E_STDP_START:
-                        filtered_spks_for_e_cells = np.zeros(spks_for_e_cells.shape)
-                        t_steps_in_burst = int(20e-3/S.DT)
+                    filtered_spks_for_e_cells = np.zeros(spks_for_e_cells.shape)
+                    t_steps_in_burst = int(20e-3/S.DT)
 
+                    if i_e >= m.EE_STDP_START or i_e >= m.EI_STDP_START:
                         for i_c in range(spks_for_e_cells.shape[1]):
                             for i_t in range(spks_for_e_cells.shape[0]):
                                 idx_filter_start = (i_t - t_steps_in_burst) if (i_t - t_steps_in_burst) > 0 else 0
@@ -539,36 +543,43 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
                                 filtered_spks_for_e_cells[i_t, i_c] = burst_kernel(spks_for_e_cells[idx_filter_start: idx_filter_end, i_c])
 
+
+                    if i_e >= m.EE_STDP_START or i_e >= m.EI_STDP_START:
+
                         for i_t in range(spks_for_e_cells.shape[0]):
                             ## find E spikes for stdp
-                            # stdp_start_ee = i_t - m.CUT_IDX_TAU_PAIR_EE if i_t - m.CUT_IDX_TAU_PAIR_EE > 0 else 0
-                            # stdp_spk_hist = filtered_spks_for_e_cells[stdp_start_ee:i_t, :]
-                            # t_points_for_stdp_ee = stdp_spk_hist.shape[0]
+                            stdp_start_ee = i_t - m.CUT_IDX_TAU_PAIR_EE if i_t - m.CUT_IDX_TAU_PAIR_EE > 0 else 0
+                            stdp_spk_hist = filtered_spks_for_e_cells[stdp_start_ee:i_t, :]
+                            t_points_for_stdp_ee = stdp_spk_hist.shape[0]
 
                             # find E spikes at current time
                             curr_spks_e = filtered_spks_for_e_cells[i_t, :]
                             sparse_curr_spks_e = csc_matrix(curr_spks_e)
 
-                            ## find I spikes for stdp
-                            stdp_start_ei = i_t - m.CUT_IDX_TAU_PAIR_EI if i_t - m.CUT_IDX_TAU_PAIR_EI > 0 else 0
-                            stdp_end_ei = i_t + m.CUT_IDX_TAU_PAIR_EI if i_t + m.CUT_IDX_TAU_PAIR_EI < spks_for_e_cells.shape[0] else (spks_for_e_cells.shape[0] - 1)
+                            if i_e >= m.EE_STDP_START:
 
-                            sparse_spks_i_plus = csc_matrix(spks_for_i_cells[i_t:stdp_end_ei, :])
-                            sparse_spks_i_minus = csc_matrix(spks_for_i_cells[stdp_start_ei:i_t, :])
+                                if t_points_for_stdp_ee > 0:
+                                    sparse_spks_e = csc_matrix(np.flip(stdp_spk_hist, axis=0))
 
-                            # if t_points_for_stdp_ee > 0:
-                                # sparse_spks_e = csc_matrix(np.flip(stdp_spk_hist, axis=0))
+                                    # # compute sparse pairwise correlations with curr_spks and spikes in stdp pairwise time window & dot into pairwise kernel
+                                    stdp_burst_pair_for_t_step = kron(sparse_curr_spks_e, sparse_spks_e).T.dot(m.KERNEL_PAIR_EE[:t_points_for_stdp_ee]).reshape(spks_for_e_cells.shape[1], spks_for_e_cells.shape[1])
+                                    stdp_burst_pair_e_e_plus += stdp_burst_pair_for_t_step
+                                    stdp_burst_pair_e_e_minus += stdp_burst_pair_for_t_step.T
 
-                                # # compute sparse pairwise correlations with curr_spks and spikes in stdp pairwise time window & dot into pairwise kernel
-                                # stdp_burst_pair_for_t_step = kron(sparse_curr_spks_e, sparse_spks_e).T.dot(m.KERNEL_PAIR_EE[:t_points_for_stdp_ee]).reshape(spks_for_e_cells.shape[1], spks_for_e_cells.shape[1])
-                                # stdp_burst_pair += stdp_burst_pair_for_t_step
-                                # stdp_burst_pair -= stdp_burst_pair_for_t_step.T
+                            if i_e >= m.EI_STDP_START:
 
-                            trimmed_kernel_ei_plus = m.KERNEL_PAIR_EI[M.CUT_IDX_TAU_PAIR_EI:M.CUT_IDX_TAU_PAIR_EI + (stdp_end_ei - i_t)]
-                            trimmed_kernel_ei_minus = m.KERNEL_PAIR_EI[M.CUT_IDX_TAU_PAIR_EI - (i_t - stdp_start_ei):M.CUT_IDX_TAU_PAIR_EI]
+                                ## find I spikes for stdp
+                                stdp_start_ei = i_t - m.CUT_IDX_TAU_PAIR_EI if i_t - m.CUT_IDX_TAU_PAIR_EI > 0 else 0
+                                stdp_end_ei = i_t + m.CUT_IDX_TAU_PAIR_EI if i_t + m.CUT_IDX_TAU_PAIR_EI < spks_for_e_cells.shape[0] else (spks_for_e_cells.shape[0] - 1)
 
-                            stdp_burst_pair_e_i_plus += kron(sparse_spks_i_plus, sparse_curr_spks_e).T.dot(trimmed_kernel_ei_plus).reshape(spks_for_i_cells.shape[1], spks_for_e_cells.shape[1])
-                            stdp_burst_pair_e_i_minus += kron(sparse_spks_i_minus, sparse_curr_spks_e).T.dot(trimmed_kernel_ei_minus).reshape(spks_for_i_cells.shape[1], spks_for_e_cells.shape[1])
+                                sparse_spks_i_plus = csc_matrix(spks_for_i_cells[i_t:stdp_end_ei, :])
+                                sparse_spks_i_minus = csc_matrix(spks_for_i_cells[stdp_start_ei:i_t, :])
+
+                                trimmed_kernel_ei_plus = m.KERNEL_PAIR_EI[M.CUT_IDX_TAU_PAIR_EI:M.CUT_IDX_TAU_PAIR_EI + (stdp_end_ei - i_t)]
+                                trimmed_kernel_ei_minus = m.KERNEL_PAIR_EI[M.CUT_IDX_TAU_PAIR_EI - (i_t - stdp_start_ei):M.CUT_IDX_TAU_PAIR_EI]
+
+                                stdp_burst_pair_e_i_plus += kron(sparse_spks_i_plus, sparse_curr_spks_e).T.dot(trimmed_kernel_ei_plus).reshape(spks_for_i_cells.shape[1], spks_for_e_cells.shape[1])
+                                stdp_burst_pair_e_i_minus += kron(sparse_spks_i_minus, sparse_curr_spks_e).T.dot(trimmed_kernel_ei_minus).reshape(spks_for_i_cells.shape[1], spks_for_e_cells.shape[1])
 
 
                     # E POPULATION-LEVEL FIRING RATE RULE
@@ -625,7 +636,8 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
 
 
-                    e_total_potentiation = m.ETA * (m.ALPHA * fr_update_e + 0 * stdp_burst_pair)
+                    e_total_potentiation = m.ETA * (m.ALPHA * fr_update_e + m.BETA_2 * stdp_burst_pair_e_e_plus)
+                    e_total_depression = m.ETA * (m.BETA_2 * stdp_burst_pair_e_e_minus)
                     i_total_potentiation = m.ETA * (m.BETA * stdp_burst_pair_e_i_plus)
                     i_total_depression = m.ETA * (m.BETA * stdp_burst_pair_e_i_minus)
 
@@ -638,6 +650,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
 
                     w_r_copy['E'][:m.N_EXC, :m.N_EXC] += (e_total_potentiation * w_r_copy['E'][:m.N_EXC, :m.N_EXC])
+                    w_r_copy['E'][:m.N_EXC, :m.N_EXC] -= (e_total_depression * (m.W_E_E_R_MAX * ee_connectivity - w_r_copy['E'][:m.N_EXC, :m.N_EXC]))
  
                     w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] += i_total_potentiation * (m.W_E_I_R_MAX * ei_connectivity - w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC])
                     w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] += i_total_depression * w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC]

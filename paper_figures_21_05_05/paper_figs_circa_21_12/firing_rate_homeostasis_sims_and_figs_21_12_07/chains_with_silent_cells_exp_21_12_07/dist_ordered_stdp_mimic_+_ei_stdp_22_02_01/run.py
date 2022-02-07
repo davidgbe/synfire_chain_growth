@@ -93,8 +93,8 @@ M = Generic(
     W_E_I_R_MAX=15e-5,
     W_I_E_R=0.25e-5,
     W_A=6e-6, #2.5e-6,
-    W_E_E_R=0.26 * 0.004 * 1.15,
-    W_E_E_R_MAX=0.26 * 0.004 * 30 * 1.15,
+    W_E_E_R=0.26 * 0.004 * 1.05,
+    W_E_E_R_MAX=0.26 * 0.004 * 30 * 1.05,
     W_MIN=1e-8,
 
     # Dropout params
@@ -105,17 +105,16 @@ M = Generic(
     SET_FR_FLAG=(args.load_run is None or args.load_run[0] is None),
     E_SINGLE_FR_TRIALS=(1, 10),
     I_SINGLE_FR_TRIALS=(9, 10),
-    POP_FR_TRIALS=(140, 149),
-    E_STDP_START=150,
+    POP_FR_TRIALS=(90, 99),
+    E_STDP_START=100,
 
     # Synaptic plasticity params
     TAU_STDP_PAIR_EE=30e-3,
     TAU_STDP_PAIR_EI=10e-3,
 
-    SINGLE_CELL_FR_SETPOINT_MIN=10,
-    SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
+    SINGLE_CELL_FR_SETPOINT_MAX=5,
     SINGLE_CELL_LINE_ATTR=args.fr_single_line_attr[0],
-    SINGLE_CELL_LINE_ATTR_WIDTH=5,
+    SINGLE_CELL_LINE_ATTR_WIDTH=2,
     ETA=0.3,
     ALPHA=args.alpha[0], #3e-2
     BETA=args.beta[0], #1e-3,
@@ -356,7 +355,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 np.concatenate([np.random.poisson(m.DRIVING_HZ * S.DT, size=(len(t), 1)) for i in range(m.N_DRIVING_CELLS)], axis=1)
                 spks_u = copy(spks_u_base)
                 spks_u[:, :m.N_DRIVING_CELLS] = np.zeros((len(t), m.N_DRIVING_CELLS))
-                burst_t = np.arange(0, 5 * int(m.BURST_T / S.DT), int(m.BURST_T / S.DT))
+                burst_t = np.arange(0, 4 * int(m.BURST_T / S.DT), int(m.BURST_T / S.DT))
 
                 for t_idx, driving_cell_idx in zip(*activation_times.nonzero()):
                     input_noise_t = np.array(np.random.normal(scale=m.INPUT_STD / S.DT), dtype=int)
@@ -578,9 +577,9 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         if e_cell_fr_setpoints is None:
                             e_cell_fr_setpoints = np.sum(spks_for_e_cells > 0, axis=0)
                         else:
-                            e_cell_fr_setpoints = np.minimum(np.maximum(np.sum(spks_for_e_cells > 0, axis=0), e_cell_fr_setpoints), 3)
+                            e_cell_fr_setpoints = np.maximum(np.sum(spks_for_e_cells > 0, axis=0), e_cell_fr_setpoints)
                     elif i_e == m.E_SINGLE_FR_TRIALS[1] and m.SET_FR_FLAG:
-                        e_cell_fr_setpoints = e_cell_fr_setpoints.astype(float)
+                        e_cell_fr_setpoints = np.minimum(e_cell_fr_setpoints, m.SINGLE_CELL_FR_SETPOINT_MAX).astype(float)
                         if m.SINGLE_CELL_LINE_ATTR == 1:
                             e_cell_fr_setpoints[e_cell_fr_setpoints < (m.SINGLE_CELL_LINE_ATTR_WIDTH/2)] = m.SINGLE_CELL_LINE_ATTR_WIDTH/2
                         where_fr_is_0 = (e_cell_fr_setpoints == 0)
@@ -610,9 +609,11 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     if i_e >= m.POP_FR_TRIALS[0] and i_e < m.POP_FR_TRIALS[1]:
                         if e_cell_pop_fr_setpoint is None:
                             e_cell_pop_fr_setpoint = np.sum(spks_for_e_cells)
-                        elif np.sum(spks_for_e_cells) > e_cell_pop_fr_setpoint:
-                            e_cell_pop_fr_setpoint = np.sum(spks_for_e_cells)
-                    elif i_e >= m.POP_FR_TRIALS[1]:
+                        else:
+                            e_cell_pop_fr_setpoint += np.sum(spks_for_e_cells)
+                    elif i_e == m.POP_FR_TRIALS[1]:
+                        e_cell_pop_fr_setpoint = e_cell_pop_fr_setpoint / (m.POP_FR_TRIALS[1] - m.POP_FR_TRIALS[0])
+                    elif i_e > m.POP_FR_TRIALS[1]:
                         fr_pop_diff = e_cell_pop_fr_setpoint - np.sum(spks_for_e_cells)
                         fr_pop_update = (-1 + np.exp(fr_pop_diff / 60)) / (1 + np.exp(fr_pop_diff / 60)) * np.ones((m.N_EXC, m.N_EXC))
                         print(m.GAMMA * fr_pop_update[0, 0])
