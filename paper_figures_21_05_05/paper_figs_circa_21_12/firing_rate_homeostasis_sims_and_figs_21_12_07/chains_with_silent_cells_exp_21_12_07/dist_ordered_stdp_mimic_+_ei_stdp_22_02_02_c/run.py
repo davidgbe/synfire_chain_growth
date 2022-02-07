@@ -698,7 +698,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         }
                         base_data_to_save.update(update_obj)
 
-                    if i_e % 250 == 0:
+                    if i_e % 100 == 0:
                         update_obj = {
                             'w_r_e': rsp.ntwk.w_r['E'],
                             'w_r_i': rsp.ntwk.w_r['I'],
