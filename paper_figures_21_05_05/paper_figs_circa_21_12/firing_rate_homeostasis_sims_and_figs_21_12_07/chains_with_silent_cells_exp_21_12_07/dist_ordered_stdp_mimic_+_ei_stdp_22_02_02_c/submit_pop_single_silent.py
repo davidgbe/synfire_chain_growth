@@ -80,7 +80,7 @@ params['ALPHA_1'] = [ str(3e-2) ]
 params['BETA'] = [ str(1e-3) ]
 params['GAMMA'] = [ str(1e-1) ]
 params['SYN_PROP_DIST'] = [ str(0.5) ]
-params['DROP_SEV'] = [str(0.5)]
+params['DROP_SEV'] = [str(1.3)]
 
 for key in params.keys():
 	if key == 'SEED' or type(params[key][0]) is str:

@@ -47,7 +47,7 @@ print(args)
 M = Generic(
     # Excitatory membrane
     C_M_E=1e-6,  # membrane capacitance
-    G_L_E=.4e-3,  # membrane leak conductance (T_M (s) = C_M (F/cm^2) / G_L (S/cm^2))
+    G_L_E=.25e-3,  # membrane leak conductance (T_M (s) = C_M (F/cm^2) / G_L (S/cm^2))
     E_L_E=-.067,  # membrane leak potential (V)
     V_TH_E=-.043,  # membrane spike threshold (V)
     T_R_E=1e-3,  # refractory period (s)
@@ -113,7 +113,7 @@ M = Generic(
     TAU_STDP_PAIR_EE=30e-3,
     TAU_STDP_PAIR_EI=10e-3,
 
-    SINGLE_CELL_FR_SETPOINT_MIN=10,
+    SINGLE_CELL_FR_SETPOINT_MAX=4,
     SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
     SINGLE_CELL_LINE_ATTR=args.fr_single_line_attr[0],
     SINGLE_CELL_LINE_ATTR_WIDTH=2,
@@ -189,9 +189,7 @@ def generate_exc_ff_chain(m):
 
         for i, l_idx in enumerate(reversed(range(layer_idx))):
             connected_cells_for_layer = mat_1_if_under_val(gamma * M.CON_PROBS_FF[i], (m.PROJECTION_NUM,))
-            strong_weight_gaussian = gaussian((m.PROJECTION_NUM,), w, 0.2 * w) * np.exp(-i / 4)
-            weak_weight_guassian = small_syn_scaling_factor * w * np.random.exponential(scale=4, size=(m.PROJECTION_NUM,))
-            incoming_weights = np.where(all_syn_props[(l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] * syn_prop > 0.5, strong_weight_gaussian, weak_weight_guassian)
+            incoming_weights = gaussian((m.PROJECTION_NUM,), w, 0.2 * w)
             incoming_weights[connected_cells_for_layer == 0] = 0
 
             cons_for_cell[0, (l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] = incoming_weights
@@ -313,6 +311,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
             i_cell_fr_setpoints = None
             e_cell_pop_fr_setpoint = None
+            e_cell_pop_fr_measurements = None
             active_cells_pre_dropout_mask = None
             surviving_cell_indices = None
             initial_summed_weights = None
@@ -587,11 +586,13 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     print(np.sum(spks_for_e_cells))
 
                     if i_e >= m.POP_FR_TRIALS[0] and i_e < m.POP_FR_TRIALS[1]:
-                        if e_cell_pop_fr_setpoint is None:
-                            e_cell_pop_fr_setpoint = np.sum(spks_for_e_cells)
-                        elif np.sum(spks_for_e_cells) > e_cell_pop_fr_setpoint:
-                            e_cell_pop_fr_setpoint = np.sum(spks_for_e_cells)
-                    elif i_e >= m.POP_FR_TRIALS[1]:
+                        if e_cell_pop_fr_measurements is None:
+                            e_cell_pop_fr_measurements = np.sum(spks_for_e_cells)
+                        else:
+                            e_cell_pop_fr_measurements += np.sum(spks_for_e_cells)
+                    elif i_e == m.POP_FR_TRIALS[1]:
+                        e_cell_pop_fr_setpoint = e_cell_pop_fr_measurements / (m.POP_FR_TRIALS[1] - m.POP_FR_TRIALS[0])
+                    elif i_e > m.POP_FR_TRIALS[1]:
                         fr_pop_diff = e_cell_pop_fr_setpoint - np.sum(spks_for_e_cells)
                         fr_pop_update = (-1 + np.exp(fr_pop_diff / 60)) / (1 + np.exp(fr_pop_diff / 60))
                         print(m.GAMMA * fr_pop_update)
@@ -608,7 +609,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                             e_cell_fr_setpoints = np.maximum(np.sum(spks_for_e_cells > 0, axis=0), e_cell_fr_setpoints)
                     elif i_e == m.E_SINGLE_FR_TRIALS[1] and m.SET_FR_FLAG:
                         e_cell_fr_setpoints = e_cell_fr_setpoints.astype(float)
-                        e_cell_fr_setpoints[e_cell_fr_setpoints > 5] = 5
+                        e_cell_fr_setpoints[e_cell_fr_setpoints > m.SINGLE_CELL_FR_SETPOINT_MAX] = m.SINGLE_CELL_FR_SETPOINT_MAX
                         if m.SINGLE_CELL_LINE_ATTR == 1:
                             pass
                             # e_cell_fr_setpoints[e_cell_fr_setpoints < (m.SINGLE_CELL_LINE_ATTR_WIDTH/2)] = m.SINGLE_CELL_LINE_ATTR_WIDTH/2
@@ -630,9 +631,9 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                             e_diffs[e_diffs > 0] = 0
                         fr_update_e = e_diffs.reshape(e_diffs.shape[0], 1) * np.ones((m.N_EXC + m.N_SILENT, m.N_EXC + m.N_SILENT)).astype(float)
 
-                        e_cell_fr_setpoints += m.GAMMA * 2 / 5 * np.sqrt(e_cell_fr_setpoints * (5 - e_cell_fr_setpoints)) * fr_pop_update + 1e-4 * 5 * np.random.rand(len(e_cell_fr_setpoints))
+                        e_cell_fr_setpoints += m.GAMMA * 2 / 5 * np.sqrt(e_cell_fr_setpoints * (m.SINGLE_CELL_FR_SETPOINT_MAX- e_cell_fr_setpoints)) * fr_pop_update + 1e-4 * m.SINGLE_CELL_FR_SETPOINT_MAX * np.random.rand(len(e_cell_fr_setpoints))
                         e_cell_fr_setpoints[e_cell_fr_setpoints < 0] = 0
-                        e_cell_fr_setpoints[e_cell_fr_setpoints > 5] = 5
+                        e_cell_fr_setpoints[e_cell_fr_setpoints > m.SINGLE_CELL_FR_SETPOINT_MAX] = m.SINGLE_CELL_FR_SETPOINT_MAX
 
 
 
@@ -685,6 +686,9 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
                     if e_cell_fr_setpoints is not None:
                         base_data_to_save['e_cell_fr_setpoints'] = e_cell_fr_setpoints
+
+                    if e_cell_pop_fr_setpoint is not None:
+                        base_data_to_save['e_cell_pop_fr_setpoint'] = e_cell_pop_fr_setpoint
 
                     if i_e >= m.DROPOUT_ITER:
                         update_obj = {
