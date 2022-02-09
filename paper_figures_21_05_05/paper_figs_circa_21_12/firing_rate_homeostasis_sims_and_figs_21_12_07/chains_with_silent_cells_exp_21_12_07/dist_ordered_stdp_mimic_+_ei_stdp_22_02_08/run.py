@@ -15,6 +15,7 @@ from functools import reduce, partial
 import argparse
 import time
 import tracemalloc
+from pynverse import inversefunc
 
 from aux import *
 from disp import *
@@ -28,6 +29,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--title', metavar='T', type=str, nargs=1)
 parser.add_argument('--alpha', metavar='a', type=float, nargs=1)
 parser.add_argument('--beta', metavar='b', type=float, nargs=1)
+parser.add_argument('--beta_2', metavar='b2', type=float, nargs=1)
 parser.add_argument('--gamma', metavar='c', type=float, nargs=1)
 parser.add_argument('--fr_single_line_attr', metavar='s', type=int, nargs=1)
 parser.add_argument('--rng_seed', metavar='r', type=int, nargs=1)
@@ -46,7 +48,7 @@ print(args)
 M = Generic(
     # Excitatory membrane
     C_M_E=1e-6,  # membrane capacitance
-    G_L_E=.4e-3,  # membrane leak conductance (T_M (s) = C_M (F/cm^2) / G_L (S/cm^2))
+    G_L_E=.25e-3,  # membrane leak conductance (T_M (s) = C_M (F/cm^2) / G_L (S/cm^2))
     E_L_E=-.067,  # membrane leak potential (V)
     V_TH_E=-.043,  # membrane spike threshold (V)
     T_R_E=1e-3,  # refractory period (s)
@@ -90,11 +92,11 @@ M = Generic(
 
     # Weights
     W_E_I_R=10e-5,
-    W_E_I_R_MAX=15e-5,
+    W_E_I_R_MAX=12e-5,
     W_I_E_R=0.25e-5,
-    W_A=6e-6, #2.5e-6,
-    W_E_E_R=0.26 * 0.004 * 1.15,
-    W_E_E_R_MAX=0.26 * 0.004 * 30 * 1.15,
+    W_A=2.5e-6, #2.5e-6,
+    W_E_E_R=0.26 * 0.004 * 0.7,
+    W_E_E_R_MAX=0.26 * 0.004 * 10 * 0.7,
     W_MIN=1e-8,
 
     # Dropout params
@@ -103,22 +105,23 @@ M = Generic(
     DROPOUT_SEV=args.dropout_per[0],
 
     SET_FR_FLAG=(args.load_run is None or args.load_run[0] is None),
-    E_SINGLE_FR_TRIALS=(11, 18),
-    I_SINGLE_FR_TRIALS=(9, 10),
-    POP_FR_TRIALS=(0, 10),
-    E_STDP_START=19,
+    E_SINGLE_FR_TRIALS=(90, 99),
+    POP_FR_TRIALS=(1, 10),
+    EE_STDP_START=100000,
+    EI_STDP_START=100,
 
     # Synaptic plasticity params
     TAU_STDP_PAIR_EE=30e-3,
     TAU_STDP_PAIR_EI=10e-3,
 
-    SINGLE_CELL_FR_SETPOINT_MIN=10,
+    SINGLE_CELL_FR_SETPOINT_MAX=2,
     SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
     SINGLE_CELL_LINE_ATTR=args.fr_single_line_attr[0],
-    SINGLE_CELL_LINE_ATTR_WIDTH=5,
+    SINGLE_CELL_LINE_ATTR_WIDTH=4,
     ETA=0.3,
     ALPHA=args.alpha[0], #3e-2
     BETA=args.beta[0], #1e-3,
+    BETA_2=args.beta_2[0], #1e-3,
     GAMMA=args.gamma[0], #1e-4,
 )
 
@@ -141,8 +144,8 @@ M.DROPOUT_MAX_IDX = M.N_EXC
 
 M.INITIAL_SUMMED_WEIGHT = M.MEAN_N_CONS_PER_CELL * M.W_E_E_R / M.PROJECTION_NUM
 
-if not M.SET_FR_FLAG:
-    M.E_STDP_START = M.E_SINGLE_FR_TRIALS[1]
+if M.SET_FR_FLAG:
+    M.EE_STDP_START = M.E_SINGLE_FR_TRIALS[1]
 
 ## SMLN
 
@@ -176,7 +179,7 @@ def generate_exc_ff_chain(m):
 
         cons_for_cell = np.zeros((1, m.N_EXC))
 
-        small_syn_scaling_factor = 0.1 * (1 - syn_prop)
+        small_syn_scaling_factor = 0.15
 
         ### For a cell with 'synfire_proportion' alpha, we would like alpha * total_incoming_cons to be very synfire
         ### Calculation of feed-forward probability scaling coefficient 'gamma':
@@ -187,9 +190,7 @@ def generate_exc_ff_chain(m):
 
         for i, l_idx in enumerate(reversed(range(layer_idx))):
             connected_cells_for_layer = mat_1_if_under_val(gamma * M.CON_PROBS_FF[i], (m.PROJECTION_NUM,))
-            strong_weight_gaussian = gaussian((m.PROJECTION_NUM,), w, 0.1 * w) * np.exp(-i / 4)
-            weak_weight_guassian = small_syn_scaling_factor * w * np.random.exponential(scale=4, size=(m.PROJECTION_NUM,))
-            incoming_weights = np.where(all_syn_props[(l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] * syn_prop > 0.25, strong_weight_gaussian, weak_weight_guassian)
+            incoming_weights = gaussian((m.PROJECTION_NUM,), w, 0.2 * w)
             incoming_weights[connected_cells_for_layer == 0] = 0
 
             cons_for_cell[0, (l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] = incoming_weights
@@ -209,7 +210,13 @@ def generate_exc_ff_chain(m):
         return cons_for_cell
 
     unit_funcs = []
-    s_props = np.power(np.random.rand(m.N_EXC), m.SYN_PROP_DIST_EXP)
+
+    def F(x, a):
+        return x*(1 + a/6 - 1/2 * a * x +  1/3 * a * x**2)
+
+    inv = inversefunc(lambda s: F(s, m.SYN_PROP_DIST_EXP))
+
+    s_props = inv(np.random.rand(m.N_EXC))
 
     for i in range(m.N_EXC):
         unit_funcs.append(partial(ff_unit_func, layer_idx=int(i / m.PROJECTION_NUM), syn_prop=s_props[i], all_syn_props=s_props))
@@ -287,21 +294,9 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
         ]),
     }
 
+    ee_connectivity = np.where(w_r_e[:(m.N_EXC), :(m.N_EXC)], 1, 0)
     ei_connectivity = np.where(w_r_e[m.N_EXC:(m.N_EXC + m.N_INH), :(m.N_EXC)], 1, 0)
     summed_i_cell_input_initial = w_r['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC].sum(axis=1)
-
-    pairwise_spk_delays = np.block([
-        [20 * np.ones((m.N_EXC, m.N_EXC)), np.ones((m.N_EXC, m.N_INH + m.N_TERMINAL))],
-        [np.ones((m.N_INH + m.N_TERMINAL, m.N_EXC + m.N_INH + m.N_TERMINAL))],
-    ]).astype(int)
-
-    # turn pairwise delays into list of cells one cell is synapsed to with some delay tau
-    delay_map = []
-    for i in range(pairwise_spk_delays.shape[1]):
-        delay_map.append([[] for j in range(pairwise_spk_delays.max() + 1)])
-        for j in range(pairwise_spk_delays.shape[0]):
-            delay_map[-1][pairwise_spk_delays[j, i]].append(j)
-    delay_map = np.array(delay_map)
 
     def create_prop(prop_exc, prop_inh):
         return cc([prop_exc * np.ones(m.N_EXC), prop_inh * np.ones(m.N_INH + m.N_TERMINAL)])
@@ -321,8 +316,11 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
         
         for d_idx, dropout in enumerate(dropouts):
 
-            i_cell_fr_setpoints = None
+            if m.SET_FR_FLAG:
+                e_cell_fr_setpoints = 2 * np.ones((m.N_EXC))
+            e_cell_fr_setpoint_measurements = None
             e_cell_pop_fr_setpoint = None
+            e_cell_pop_fr_measurements = None
             active_cells_pre_dropout_mask = None
             surviving_cell_indices = None
             initial_summed_weights = None
@@ -369,7 +367,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 np.concatenate([np.random.poisson(m.DRIVING_HZ * S.DT, size=(len(t), 1)) for i in range(m.N_DRIVING_CELLS)], axis=1)
                 spks_u = copy(spks_u_base)
                 spks_u[:, :m.N_DRIVING_CELLS] = np.zeros((len(t), m.N_DRIVING_CELLS))
-                burst_t = np.arange(0, 4 * int(m.BURST_T / S.DT), int(m.BURST_T / S.DT))
+                burst_t = np.arange(0, 5 * int(m.BURST_T / S.DT), int(m.BURST_T / S.DT))
 
                 for t_idx, driving_cell_idx in zip(*activation_times.nonzero()):
                     input_noise_t = np.array(np.random.normal(scale=m.INPUT_STD / S.DT), dtype=int)
@@ -389,8 +387,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     t_s={'E': M.T_E, 'I': M.T_E, 'A': M.T_A},
                     w_r=w_r_copy,
                     w_u=w_u,
-                    pairwise_spk_delays=pairwise_spk_delays,
-                    delay_map=delay_map,
                 )
 
                 clamp = Generic(v={0: e_l}, spk={})
@@ -503,22 +499,23 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     exc_cells_newly_active[:, active_cells_pre_dropout_mask] = 0
                     exc_cells_newly_active = np.stack(exc_cells_newly_active.nonzero())
 
-                    colors_for_initially_active = idx_to_color[exc_cells_initially_active[1, : ]]
-                    colors_for_newly_active = idx_to_color[exc_cells_newly_active[1, : ]]
+                    colors_for_initially_active = idx_to_freq_colors[exc_cells_initially_active[1, : ]]
+                    colors_for_newly_active = idx_to_freq_colors[exc_cells_newly_active[1, : ]]
 
-                    axs[0].scatter(exc_cells_initially_active[0, :] * S.DT * 1000, exc_cells_initially_active[1, :], s=1, c=colors_for_initially_active, zorder=0, alpha=0.2)
+                    axs[0].scatter(exc_cells_initially_active[0, :] * S.DT * 1000, exc_cells_initially_active[1, :], s=1, c=colors_for_initially_active, zorder=0, alpha=0.5)
                     axs[0].scatter(exc_cells_newly_active[0, :] * S.DT * 1000, exc_cells_newly_active[1, :], s=1, c=colors_for_newly_active, zorder=1, alpha=1)
                 else:
                     axs[0].scatter(exc_raster[0, :] * S.DT * 1000, exc_raster[1, :], s=1, c=idx_to_freq_colors[exc_raster[1, :]], zorder=0, alpha=1)
-                    if e_cell_fr_setpoints is not None:
-                        idx_to_setpoint_colors = to_colors(e_cell_fr_setpoints.astype(int))
-                        axs[1].scatter(exc_raster[0, :] * S.DT * 1000, exc_raster[1, :], s=1, c=idx_to_setpoint_colors[exc_raster[1, :]], zorder=0, alpha=1)
+
+                if e_cell_fr_setpoints is not None:
+                    idx_to_setpoint_colors = to_colors(e_cell_fr_setpoints.astype(int))
+                    axs[1].scatter(exc_raster[0, :] * S.DT * 1000, exc_raster[1, :], s=1, c=idx_to_setpoint_colors[exc_raster[1, :]], zorder=0, alpha=1)
 
                 axs[0].scatter(inh_raster[0, :] * 1000, inh_raster[1, :], s=1, c='black', zorder=0, alpha=1)
 
                 for j in range(2):
                     axs[j].set_ylim(-1, m.N_EXC + m.N_INH)
-                    axs[j].set_xlim(m.INPUT_DELAY * 1000, 250)
+                    axs[j].set_xlim(m.INPUT_DELAY * 1000, 175)
                     axs[j].set_ylabel('Cell Index')
                     axs[j].set_xlabel('Time (ms)')
 
@@ -538,20 +535,24 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                             return spks[-1]
 
                     # STDP FOR E CELLS: put in pairwise STDP on filtered_spks_for_e_cells
-                    stdp_burst_pair = 0
+                    stdp_burst_pair_e_e_plus = 0
+                    stdp_burst_pair_e_e_minus = 0
                     stdp_burst_pair_e_i_plus = 0
                     stdp_burst_pair_e_i_minus = 0
 
-                    if i_e >= m.E_STDP_START:
-                        filtered_spks_for_e_cells = np.zeros(spks_for_e_cells.shape)
-                        t_steps_in_burst = int(20e-3/S.DT)
+                    filtered_spks_for_e_cells = np.zeros(spks_for_e_cells.shape)
+                    t_steps_in_burst = int(20e-3/S.DT)
 
+                    if i_e >= m.EE_STDP_START or i_e >= m.EI_STDP_START:
                         for i_c in range(spks_for_e_cells.shape[1]):
                             for i_t in range(spks_for_e_cells.shape[0]):
                                 idx_filter_start = (i_t - t_steps_in_burst) if (i_t - t_steps_in_burst) > 0 else 0
                                 idx_filter_end = (i_t + 1)
 
                                 filtered_spks_for_e_cells[i_t, i_c] = burst_kernel(spks_for_e_cells[idx_filter_start: idx_filter_end, i_c])
+
+
+                    if i_e >= m.EE_STDP_START or i_e >= m.EI_STDP_START:
 
                         for i_t in range(spks_for_e_cells.shape[0]):
                             ## find E spikes for stdp
@@ -563,43 +564,74 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                             curr_spks_e = filtered_spks_for_e_cells[i_t, :]
                             sparse_curr_spks_e = csc_matrix(curr_spks_e)
 
-                            ## find I spikes for stdp
-                            stdp_start_ei = i_t - m.CUT_IDX_TAU_PAIR_EI if i_t - m.CUT_IDX_TAU_PAIR_EI > 0 else 0
-                            stdp_end_ei = i_t + m.CUT_IDX_TAU_PAIR_EI if i_t + m.CUT_IDX_TAU_PAIR_EI < spks_for_e_cells.shape[0] else (spks_for_e_cells.shape[0] - 1)
+                            # if i_e >= m.EE_STDP_START:
 
-                            sparse_spks_i_plus = csc_matrix(spks_for_i_cells[i_t:stdp_end_ei, :])
-                            sparse_spks_i_minus = csc_matrix(spks_for_i_cells[stdp_start_ei:i_t, :])
+                            #     if t_points_for_stdp_ee > 0:
+                            #         sparse_spks_e = csc_matrix(np.flip(stdp_spk_hist, axis=0))
 
-                            # if t_points_for_stdp_ee > 0:
-                                # sparse_spks_e = csc_matrix(np.flip(stdp_spk_hist, axis=0))
+                            #         # # compute sparse pairwise correlations with curr_spks and spikes in stdp pairwise time window & dot into pairwise kernel
+                            #         stdp_burst_pair_for_t_step = kron(sparse_curr_spks_e, sparse_spks_e).T.dot(m.KERNEL_PAIR_EE[:t_points_for_stdp_ee]).reshape(spks_for_e_cells.shape[1], spks_for_e_cells.shape[1])
+                            #         stdp_burst_pair_e_e_plus += stdp_burst_pair_for_t_step
+                            #         stdp_burst_pair_e_e_minus += stdp_burst_pair_for_t_step.T
 
-                                # # compute sparse pairwise correlations with curr_spks and spikes in stdp pairwise time window & dot into pairwise kernel
-                                # stdp_burst_pair_for_t_step = kron(sparse_curr_spks_e, sparse_spks_e).T.dot(m.KERNEL_PAIR_EE[:t_points_for_stdp_ee]).reshape(spks_for_e_cells.shape[1], spks_for_e_cells.shape[1])
-                                # stdp_burst_pair += stdp_burst_pair_for_t_step
-                                # stdp_burst_pair -= stdp_burst_pair_for_t_step.T
+                            if i_e >= m.EI_STDP_START:
 
-                            trimmed_kernel_ei_plus = m.KERNEL_PAIR_EI[M.CUT_IDX_TAU_PAIR_EI:M.CUT_IDX_TAU_PAIR_EI + (stdp_end_ei - i_t)]
-                            trimmed_kernel_ei_minus = m.KERNEL_PAIR_EI[M.CUT_IDX_TAU_PAIR_EI - (i_t - stdp_start_ei):M.CUT_IDX_TAU_PAIR_EI]
+                                ## find I spikes for stdp
+                                stdp_start_ei = i_t - m.CUT_IDX_TAU_PAIR_EI if i_t - m.CUT_IDX_TAU_PAIR_EI > 0 else 0
+                                stdp_end_ei = i_t + m.CUT_IDX_TAU_PAIR_EI if i_t + m.CUT_IDX_TAU_PAIR_EI < spks_for_e_cells.shape[0] else (spks_for_e_cells.shape[0] - 1)
 
-                            stdp_burst_pair_e_i_plus += kron(sparse_spks_i_plus, sparse_curr_spks_e).T.dot(trimmed_kernel_ei_plus).reshape(spks_for_i_cells.shape[1], spks_for_e_cells.shape[1])
-                            stdp_burst_pair_e_i_minus += kron(sparse_spks_i_minus, sparse_curr_spks_e).T.dot(trimmed_kernel_ei_minus).reshape(spks_for_i_cells.shape[1], spks_for_e_cells.shape[1])
+                                sparse_spks_i_plus = csc_matrix(spks_for_i_cells[i_t:stdp_end_ei, :])
+                                sparse_spks_i_minus = csc_matrix(spks_for_i_cells[stdp_start_ei:i_t, :])
 
+                                trimmed_kernel_ei_plus = m.KERNEL_PAIR_EI[M.CUT_IDX_TAU_PAIR_EI:M.CUT_IDX_TAU_PAIR_EI + (stdp_end_ei - i_t)]
+                                trimmed_kernel_ei_minus = m.KERNEL_PAIR_EI[M.CUT_IDX_TAU_PAIR_EI - (i_t - stdp_start_ei):M.CUT_IDX_TAU_PAIR_EI]
+
+                                stdp_burst_pair_e_i_plus += kron(sparse_spks_i_plus, sparse_curr_spks_e).T.dot(trimmed_kernel_ei_plus).reshape(spks_for_i_cells.shape[1], spks_for_e_cells.shape[1])
+                                stdp_burst_pair_e_i_minus += kron(sparse_spks_i_minus, sparse_curr_spks_e).T.dot(trimmed_kernel_ei_minus).reshape(spks_for_i_cells.shape[1], spks_for_e_cells.shape[1])
+
+
+                    # E POPULATION-LEVEL FIRING RATE RULE
+                    fr_pop_update = 0
+                    print(np.sum(spks_for_e_cells))
+
+                    if i_e >= m.POP_FR_TRIALS[0] and i_e < m.POP_FR_TRIALS[1]:
+                        if e_cell_pop_fr_measurements is None:
+                            e_cell_pop_fr_measurements = np.sum(spks_for_e_cells)
+                        else:
+                            e_cell_pop_fr_measurements = 4500 # np.maximum(np.sum(spks_for_e_cells), e_cell_pop_fr_measurements)
+                    elif i_e == m.POP_FR_TRIALS[1]:
+                        e_cell_pop_fr_setpoint = e_cell_pop_fr_measurements
+                    elif i_e > m.POP_FR_TRIALS[1]:
+                        fr_pop_diff = e_cell_pop_fr_setpoint - np.sum(spks_for_e_cells)
+                        fr_pop_update = (-1 + np.exp(fr_pop_diff / 60)) / (1 + np.exp(fr_pop_diff / 60)) * np.ones((m.N_EXC + m.N_SILENT, m.N_EXC + m.N_SILENT))
 
 
                     # E SINGLE-CELL FIRING RATE RULE
                     fr_update_e = 0
 
-                    if i_e >= m.E_SINGLE_FR_TRIALS[0] and i_e < m.E_SINGLE_FR_TRIALS[1] and m.SET_FR_FLAG:
-                        if e_cell_fr_setpoints is None:
-                            e_cell_fr_setpoints = np.sum(spks_for_e_cells > 0, axis=0)
-                        else:
-                            e_cell_fr_setpoints = np.maximum(np.sum(spks_for_e_cells > 0, axis=0), e_cell_fr_setpoints)
-                    elif i_e == m.E_SINGLE_FR_TRIALS[1] and m.SET_FR_FLAG:
-                        e_cell_fr_setpoints = e_cell_fr_setpoints.astype(float)
+                    def trim_diffs(diffs, setpoint_widths):
+                        diffs[(diffs <= (setpoint_widths/2)) & (diffs >= (-1 * setpoint_widths))] = 0
+                        diffs[diffs >= (setpoint_widths/2)] -= setpoint_widths
+                        diffs[diffs <= (-1 * setpoint_widths/2)] += setpoint_widths
+                        return diffs
+
+                    if i_e < m.E_SINGLE_FR_TRIALS[1] and i_e > m.POP_FR_TRIALS[1] and m.SET_FR_FLAG:
+                        e_diffs = e_cell_fr_setpoints - np.sum(spks_for_e_cells > 0, axis=0)
                         if m.SINGLE_CELL_LINE_ATTR == 1:
-                            e_cell_fr_setpoints[e_cell_fr_setpoints < (m.SINGLE_CELL_LINE_ATTR_WIDTH/2)] = m.SINGLE_CELL_LINE_ATTR_WIDTH/2
-                        where_fr_is_0 = (e_cell_fr_setpoints == 0)
+                            e_diffs = trim_diffs(e_diffs, 4)
+                            print(e_diffs[e_diffs.nonzero()])
+                            fr_update_e = e_diffs.reshape(e_diffs.shape[0], 1) * np.ones((m.N_EXC + m.N_SILENT, m.N_EXC + m.N_SILENT)).astype(float)
+
+                    if i_e >= m.E_SINGLE_FR_TRIALS[0] and i_e < m.E_SINGLE_FR_TRIALS[1] and m.SET_FR_FLAG:
+                        if e_cell_fr_setpoint_measurements is None:
+                            e_cell_fr_setpoint_measurements = np.sum(spks_for_e_cells > 0, axis=0)
+                        else:
+                            e_cell_fr_setpoint_measurements += np.sum(spks_for_e_cells > 0, axis=0)
+                    elif i_e == m.E_SINGLE_FR_TRIALS[1] and m.SET_FR_FLAG:
+                        # e_cell_fr_setpoints = e_cell_fr_setpoint_measurements / (m.E_SINGLE_FR_TRIALS[1] - m.E_SINGLE_FR_TRIALS[0])
+
                         if m.SINGLE_CELL_LINE_ATTR == 2:
+                            where_fr_is_0 = (e_cell_fr_setpoints == 0)
                             e_cell_fr_setpoints += m.SINGLE_CELL_LINE_ATTR_WIDTH/2
                             e_cell_fr_setpoints[where_fr_is_0] = np.random.normal   (
                                 loc=m.SINGLE_CELL_FR_SETPOINT_MIN,
@@ -609,31 +641,14 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     elif i_e > m.E_SINGLE_FR_TRIALS[1]:
                         e_diffs = e_cell_fr_setpoints - np.sum(spks_for_e_cells > 0, axis=0)
                         if m.SINGLE_CELL_LINE_ATTR == 1:
-                            e_diffs[(e_diffs <= (m.SINGLE_CELL_LINE_ATTR_WIDTH/2)) & (e_diffs >= (-1 * m.SINGLE_CELL_LINE_ATTR_WIDTH/2))] = 0
-                            e_diffs[e_diffs >= (m.SINGLE_CELL_LINE_ATTR_WIDTH/2)] -= (m.SINGLE_CELL_LINE_ATTR_WIDTH/2)
-                            e_diffs[e_diffs <= (-1 * m.SINGLE_CELL_LINE_ATTR_WIDTH/2)] += (m.SINGLE_CELL_LINE_ATTR_WIDTH/2)
+                            e_diffs = trim_diffs(e_diffs, m.SINGLE_CELL_LINE_ATTR_WIDTH)
                         elif m.SINGLE_CELL_LINE_ATTR == 2:
                             e_diffs[e_diffs > 0] = 0
                         fr_update_e = e_diffs.reshape(e_diffs.shape[0], 1) * np.ones((m.N_EXC + m.N_SILENT, m.N_EXC + m.N_SILENT)).astype(float)
 
 
-
-                    # E POPULATION-LEVEL FIRING RATE RULE
-                    fr_pop_update = 0
-                    print(np.sum(spks_for_e_cells))
-
-                    if i_e >= m.POP_FR_TRIALS[0] and i_e < m.POP_FR_TRIALS[1]:
-                        if e_cell_pop_fr_setpoint is None:
-                            e_cell_pop_fr_setpoint = np.sum(spks_for_e_cells)
-                        elif np.sum(spks_for_e_cells) > e_cell_pop_fr_setpoint:
-                            e_cell_pop_fr_setpoint = np.sum(spks_for_e_cells)
-                    elif i_e >= m.POP_FR_TRIALS[1]:
-                        fr_pop_diff = e_cell_pop_fr_setpoint - np.sum(spks_for_e_cells)
-                        fr_pop_update = (-1 + np.exp(fr_pop_diff / 60)) / (1 + np.exp(fr_pop_diff / 60)) * np.ones((m.N_EXC, m.N_EXC))
-                        print(m.GAMMA * fr_pop_update[0, 0])
-
-
-                    e_total_potentiation = m.ETA * (m.ALPHA * fr_update_e + 0 * stdp_burst_pair + m.GAMMA * fr_pop_update)
+                    e_total_potentiation = m.ETA * (m.ALPHA * fr_update_e + m.BETA_2 * stdp_burst_pair_e_e_plus + m.GAMMA * fr_pop_update)
+                    # e_total_depression = m.ETA * (m.BETA_2 * stdp_burst_pair_e_e_minus)
                     i_total_potentiation = m.ETA * (m.BETA * stdp_burst_pair_e_i_plus)
                     i_total_depression = m.ETA * (m.BETA * stdp_burst_pair_e_i_minus)
 
@@ -646,6 +661,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
 
                     w_r_copy['E'][:m.N_EXC, :m.N_EXC] += (e_total_potentiation * w_r_copy['E'][:m.N_EXC, :m.N_EXC])
+                    # w_r_copy['E'][:m.N_EXC, :m.N_EXC] -= (e_total_depression * (m.W_E_E_R_MAX * ee_connectivity - w_r_copy['E'][:m.N_EXC, :m.N_EXC]))
  
                     w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] += i_total_potentiation * (m.W_E_I_R_MAX * ei_connectivity - w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC])
                     w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] += i_total_depression * w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC]
@@ -681,6 +697,9 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     if e_cell_fr_setpoints is not None:
                         base_data_to_save['e_cell_fr_setpoints'] = e_cell_fr_setpoints
 
+                    if e_cell_pop_fr_setpoint is not None:
+                        base_data_to_save['e_cell_pop_fr_setpoint'] = e_cell_pop_fr_setpoint
+
                     if i_e >= m.DROPOUT_ITER:
                         update_obj = {
                             'exc_cells_initially_active': exc_cells_initially_active,
@@ -689,7 +708,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         }
                         base_data_to_save.update(update_obj)
 
-                    if i_e % 250 == 0:
+                    if i_e % 100 == 0:
                         update_obj = {
                             'w_r_e': rsp.ntwk.w_r['E'],
                             'w_r_i': rsp.ntwk.w_r['I'],

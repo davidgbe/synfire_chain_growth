@@ -3,15 +3,12 @@ Classes/functions for a few biological spiking network models.
 """
 from copy import deepcopy as copy
 import numpy as np
-from scipy.sparse import csc_matrix, csr_matrix, kron, lil_matrix, SparseEfficiencyWarning
+from scipy.sparse import csc_matrix, csr_matrix, kron
 import scipy.io as sio
 import os
-import warnings
 
 from utils.general import zero_pad
 from aux import Generic, c_tile, r_tile, dropout_on_mat
-
-# warnings.simplefilter('ignore', SparseEfficiencyWarning)
 
 cc = np.concatenate
 
@@ -19,7 +16,7 @@ cc = np.concatenate
 class LIFNtwkG(object):
     """Network of leaky integrate-and-fire neurons with *conductance-based* synapses."""
     
-    def __init__(self, c_m, g_l, e_l, v_th, v_r, t_r, e_s, t_s, w_r, w_u, pairwise_spk_delays, delay_map, sparse=True):
+    def __init__(self, c_m, g_l, e_l, v_th, v_r, t_r, e_s, t_s, w_r, w_u, sparse=True):
         # ntwk size
         n = next(iter(w_r.values())).shape[0]
         
@@ -43,7 +40,6 @@ class LIFNtwkG(object):
         self.t_s = t_s
         
         if sparse:  # sparsify connectivity if desired
-            # self.w_r = w_r
             self.w_r = {k: csc_matrix(w_r_) for k, w_r_ in w_r.items()}
             self.w_u = {k: csc_matrix(w_u_) for k, w_u_ in w_u.items()} if w_u is not None else w_u
         else:
@@ -51,8 +47,7 @@ class LIFNtwkG(object):
             self.w_u = w_u
 
         self.syns = list(self.e_s.keys())
-        self.pairwise_spk_delays = pairwise_spk_delays
-        self.delay_map = delay_map
+
 
     def run(self, dt, clamp, i_ext, spks_u=None):
         """
@@ -92,18 +87,9 @@ class LIFNtwkG(object):
         clamp = Generic(
             v={int(round(t_/dt)): f_v for t_, f_v in tmp_v},
             spk={int(round(t_/dt)): f_spk for t_, f_spk in tmp_spk})
-
-        longest_delay = self.pairwise_spk_delays.max()
         
         # loop over timesteps
         for t_ctr in range(len(i_ext)):
-
-            longest_delay_for_t_ctr = np.minimum(longest_delay, t_ctr)
-            trimmed_spks = spks[(t_ctr - longest_delay_for_t_ctr):t_ctr, :]
-
-            spk_times, spk_emitting_indices = trimmed_spks.nonzero()
-
-            spk_receiving_indices = self.delay_map[spk_emitting_indices, -(spk_times + 1)]
             
             # update conductances
             for syn in syns:
@@ -112,21 +98,8 @@ class LIFNtwkG(object):
                 else:
                     g = gs[syn][t_ctr-1, :]
                     # get weighted spike inputs
-                    # recurrent
-                    inp = np.zeros((n, 1))
-                    for spk_receiving_indices_for_emitting, spk_emitting_idx in zip(spk_receiving_indices, spk_emitting_indices):
-                        if len(spk_receiving_indices_for_emitting) > 0:
-                            inp[spk_receiving_indices_for_emitting, :] += w_r[syn][spk_receiving_indices_for_emitting, spk_emitting_idx]
-                    # inp = inp.todense()
-
-                    if len(inp.shape) == 0:
-                        inp = np.zeros((n,))
-                    else:
-                        inp = inp.reshape(inp.shape[0])
-                        # print(inp.shape)
-                        # print(inp.max())
-
-
+                    ## recurrent
+                    inp = w_r[syn].dot(spks[t_ctr-1, :])
                     ## upstream
                     if spks_u is not None:
                         if syn in w_u:
@@ -134,8 +107,6 @@ class LIFNtwkG(object):
                     
                     # update conductances from weighted spks
                     gs[syn][t_ctr, :] = g + (dt/t_s[syn])*(-gs[syn][t_ctr-1, :]) + inp
-
-            # spk_emit_times += 1
             
             # update voltages
             if t_ctr in clamp.v:  # check for clamped voltages
