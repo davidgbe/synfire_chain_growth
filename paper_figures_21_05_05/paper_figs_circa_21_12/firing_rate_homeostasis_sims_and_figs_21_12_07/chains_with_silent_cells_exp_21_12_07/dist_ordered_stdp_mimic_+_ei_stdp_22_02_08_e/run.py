@@ -293,17 +293,22 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
     summed_i_cell_input_initial = w_r['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC].sum(axis=1)
 
     pairwise_spk_delays = np.block([
-        [20 * np.ones((m.N_EXC, m.N_EXC)), np.ones((m.N_EXC, m.N_INH + m.N_TERMINAL))],
+        [int(2e-3 / S.DT) * np.ones((m.N_EXC, m.N_EXC)), np.ones((m.N_EXC, m.N_INH + m.N_TERMINAL))],
         [np.ones((m.N_INH + m.N_TERMINAL, m.N_EXC + m.N_INH + m.N_TERMINAL))],
     ]).astype(int)
 
     # turn pairwise delays into list of cells one cell is synapsed to with some delay tau
-    delay_map = []
-    for i in range(pairwise_spk_delays.shape[1]):
-        delay_map.append([[] for j in range(pairwise_spk_delays.max() + 1)])
-        for j in range(pairwise_spk_delays.shape[0]):
-            delay_map[-1][pairwise_spk_delays[j, i]].append(j)
-    delay_map = np.array(delay_map)
+    delay_maps = {}
+
+    for syn in w_r.keys():    
+        delay_map = []
+        for i in range(pairwise_spk_delays.shape[1]):
+            delay_map.append([[] for j in range(pairwise_spk_delays.max() + 1)])
+            for j in range(pairwise_spk_delays.shape[0]):
+                if w_r[syn][j, i] > 0:
+                    delay_map[-1][pairwise_spk_delays[j, i]].append(j)
+        delay_map = np.array(delay_map)
+        delay_maps[syn] = delay_map
 
     def create_prop(prop_exc, prop_inh):
         return cc([prop_exc * np.ones(m.N_EXC), prop_inh * np.ones(m.N_INH + m.N_TERMINAL)])
@@ -395,7 +400,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     w_r=w_r_copy,
                     w_u=w_u,
                     pairwise_spk_delays=pairwise_spk_delays,
-                    delay_map=delay_map,
+                    delay_maps=delay_maps,
                 )
 
                 clamp = Generic(v={0: e_l}, spk={})

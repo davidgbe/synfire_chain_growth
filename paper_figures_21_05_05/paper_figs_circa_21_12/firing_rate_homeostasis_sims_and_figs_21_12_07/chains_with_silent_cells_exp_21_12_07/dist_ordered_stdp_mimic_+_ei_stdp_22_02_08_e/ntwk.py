@@ -19,7 +19,7 @@ cc = np.concatenate
 class LIFNtwkG(object):
     """Network of leaky integrate-and-fire neurons with *conductance-based* synapses."""
     
-    def __init__(self, c_m, g_l, e_l, v_th, v_r, t_r, e_s, t_s, w_r, w_u, pairwise_spk_delays, delay_map, sparse=True):
+    def __init__(self, c_m, g_l, e_l, v_th, v_r, t_r, e_s, t_s, w_r, w_u, pairwise_spk_delays, delay_maps, sparse=True):
         # ntwk size
         n = next(iter(w_r.values())).shape[0]
         
@@ -52,7 +52,7 @@ class LIFNtwkG(object):
 
         self.syns = list(self.e_s.keys())
         self.pairwise_spk_delays = pairwise_spk_delays
-        self.delay_map = delay_map
+        self.delay_maps = delay_maps
 
     def run(self, dt, clamp, i_ext, spks_u=None):
         """
@@ -102,8 +102,6 @@ class LIFNtwkG(object):
             trimmed_spks = spks[(t_ctr - longest_delay_for_t_ctr):t_ctr, :]
 
             spk_times, spk_emitting_indices = trimmed_spks.nonzero()
-
-            spk_receiving_indices = self.delay_map[spk_emitting_indices, -(spk_times + 1)]
             
             # update conductances
             for syn in syns:
@@ -113,6 +111,7 @@ class LIFNtwkG(object):
                     g = gs[syn][t_ctr-1, :]
                     # get weighted spike inputs
                     # recurrent
+                    spk_receiving_indices = self.delay_maps[syn][spk_emitting_indices, -(spk_times + 1)]
                     inp = np.zeros((n, 1))
                     for spk_receiving_indices_for_emitting, spk_emitting_idx in zip(spk_receiving_indices, spk_emitting_indices):
                         if len(spk_receiving_indices_for_emitting) > 0:
