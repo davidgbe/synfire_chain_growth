@@ -7,8 +7,7 @@ base_path = os.curdir
 scripts = [
 	'submit_cont_drop_pop.slurm',
 ]
-drop_sev = 0.5
-load_run_name = 'e_fr_ei_stdp_settle3_'
+load_run_name = 'settle_and_drop'
 
 ### functions
 
@@ -92,13 +91,12 @@ if type(load_run_name) is list:
 else:
     all_dirs = filter_list_by_name_frags(all_in_dir('./robustness'), [load_run_name])
 
-params['SEED'] = [str(s) for s in range(2000, 2001)]
-params['ALPHA_1'] = [ str(6e-2) ]
-params['ALPHA_2'] = [ str(0.5e-2) ]
-params['BETA'] = [ str(1e-2) ]
+params['SEED'] = [ str(2090) ]
+params['ALPHA_1'] = [ str(5e-2) ]
+params['BETA'] = [ str(5e-3) ]
 params['GAMMA'] = [ str(1e-2) ]
-params['SYN_PROP_DIST'] = [ str(0.6) ]
-params['DROP_SEV'] = [str(0.5), str(0.55), str(0.6)]
+params['SYN_PROP_DIST'] = [ str(1.) ]
+params['DROP_SEV'] = [str(0.5)]
 params['LOADED_RUN_NAME'] = [d for d in all_dirs]
 print(params)
 
@@ -126,9 +124,7 @@ for src_name in scripts:
 					if n + batch_idx >= n_scripts:
 						continue
 
-					augmented_params = {
-						# 'DROP_SEV': str(drop_sev),
-					}
+					augmented_params = {}
 
 					for param_idx, v in enumerate(params.keys()):
 						augmented_params[v] = all_values[param_idx][n + batch_idx]

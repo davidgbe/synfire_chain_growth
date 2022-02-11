@@ -143,8 +143,9 @@ M.DROPOUT_MAX_IDX = M.N_EXC
 
 M.INITIAL_SUMMED_WEIGHT = M.MEAN_N_CONS_PER_CELL * M.W_E_E_R / M.PROJECTION_NUM
 
-if M.SET_FR_FLAG:
-    M.EE_STDP_START = M.E_SINGLE_FR_TRIALS[1]
+if not M.SET_FR_FLAG:
+    M.EI_STDP_START = M.E_SINGLE_FR_TRIALS[1]
+    M.POP_FR_TRIALS = M.E_SINGLE_FR_TRIALS
 
 ## SMLN
 
@@ -223,7 +224,8 @@ def generate_exc_ff_chain(m):
 ### RUN_TEST function
 
 def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=None,
-    add_noise=True, dropouts=[{'E': 0, 'I': 0}], w_r_e=None, w_r_i=None, e_cell_fr_setpoints=None, epochs=500):
+    add_noise=True, dropouts=[{'E': 0, 'I': 0}], w_r_e=None, w_r_i=None, e_cell_fr_setpoints=None,
+    e_cell_pop_fr_setpoint=None, epochs=500):
 
     output_dir = f'./figures/{output_dir_name}'
     os.makedirs(output_dir)
@@ -331,7 +333,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
             if m.SET_FR_FLAG:
                 e_cell_fr_setpoints = 2.5 * np.ones((m.N_EXC))
             e_cell_fr_setpoint_measurements = None
-            e_cell_pop_fr_setpoint = None
             e_cell_pop_fr_measurements = None
             active_cells_pre_dropout_mask = None
             surviving_cell_indices = None
@@ -608,12 +609,12 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     fr_pop_update = 0
                     print(np.sum(spks_for_e_cells))
 
-                    if i_e >= m.POP_FR_TRIALS[0] and i_e < m.POP_FR_TRIALS[1]:
+                    if i_e >= m.POP_FR_TRIALS[0] and i_e < m.POP_FR_TRIALS[1] and m.SET_FR_FLAG:
                         if e_cell_pop_fr_measurements is None:
                             e_cell_pop_fr_measurements = np.sum(spks_for_e_cells)
                         else:
                             e_cell_pop_fr_measurements += np.sum(spks_for_e_cells)
-                    elif i_e == m.POP_FR_TRIALS[1]:
+                    elif i_e == m.POP_FR_TRIALS[1] and m.SET_FR_FLAG:
                         e_cell_pop_fr_setpoint = e_cell_pop_fr_measurements / (m.POP_FR_TRIALS[1] - m.POP_FR_TRIALS[0])
                     elif i_e > m.POP_FR_TRIALS[1]:
                         fr_pop_diff = e_cell_pop_fr_setpoint - np.sum(spks_for_e_cells)
@@ -748,12 +749,13 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
 
 
 
-def quick_plot(m, run_title='', w_r_e=None, w_r_i=None, repeats=1, show_connectivity=True, n_show_only=None, add_noise=True, dropouts=[{'E': 0, 'I': 0}], e_cell_fr_setpoints=None):
+def quick_plot(m, run_title='', w_r_e=None, w_r_i=None, repeats=1, show_connectivity=True, n_show_only=None, add_noise=True, dropouts=[{'E': 0, 'I': 0}], e_cell_fr_setpoints=None, e_cell_pop_fr_setpoint=None):
     output_dir_name = f'{run_title}_{time_stamp(s=True)}:{zero_pad(int(np.random.rand() * 9999), 4)}'
 
     run_test(m, output_dir_name=output_dir_name, show_connectivity=show_connectivity,
                         repeats=repeats, n_show_only=n_show_only, add_noise=add_noise, dropouts=dropouts,
-                        w_r_e=w_r_e, w_r_i=w_r_i, epochs=S.EPOCHS, e_cell_fr_setpoints=e_cell_fr_setpoints)
+                        w_r_e=w_r_e, w_r_i=w_r_i, epochs=S.EPOCHS, e_cell_fr_setpoints=e_cell_fr_setpoints,
+                        e_cell_pop_fr_setpoint=e_cell_pop_fr_setpoint)
 
 def process_single_activation(exc_raster, m):
     # extract first spikes
@@ -781,14 +783,15 @@ for i in range(1):
     w_r_e = None
     w_r_i = None
     e_cell_fr_setpoints = None
+    e_cell_pop_fr_setpoint = None
     if args.load_run is not None and args.load_run[0] is not '':
-        loaded_data = load_previous_run(os.path.join('./robustness', args.load_run[0]), 150)
+        loaded_data = load_previous_run(os.path.join('./robustness', args.load_run[0]), 190)
         w_r_e = loaded_data['w_r_e'].toarray()
         w_r_i = loaded_data['w_r_i'].toarray()
         e_cell_fr_setpoints = loaded_data['e_cell_fr_setpoints'][0]
+        e_cell_pop_fr_setpoint = loaded_data['e_cell_pop_fr_setpoint'][0][0]
         if M.SINGLE_CELL_LINE_ATTR == 1:
             e_cell_fr_setpoints[e_cell_fr_setpoints < 1] = M.SINGLE_CELL_LINE_ATTR_WIDTH/2
 
-    all_rsps = quick_plot(M, run_title=title, w_r_e=w_r_e, w_r_i=w_r_i, e_cell_fr_setpoints=e_cell_fr_setpoints, dropouts=[
-        {'E': M.DROPOUT_SEV, 'I': 0},
-    ])
+    all_rsps = quick_plot(M, run_title=title, w_r_e=w_r_e, w_r_i=w_r_i, e_cell_fr_setpoints=e_cell_fr_setpoints,
+        e_cell_pop_fr_setpoint=e_cell_pop_fr_setpoint, dropouts=[ {'E': M.DROPOUT_SEV, 'I': 0}, ])
