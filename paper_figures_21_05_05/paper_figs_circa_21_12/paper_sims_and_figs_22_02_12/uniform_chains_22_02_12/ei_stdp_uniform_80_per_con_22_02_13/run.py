@@ -576,8 +576,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                             e_cell_fr_setpoints += np.sum(spks_for_e_cells > 0, axis=0)
                     elif i_e == m.E_SINGLE_FR_TRIALS[1] and m.SET_FR_FLAG:
                         e_cell_fr_setpoints = e_cell_fr_setpoints / (m.E_SINGLE_FR_TRIALS[1] - m.E_SINGLE_FR_TRIALS[0])
-                        if m.SINGLE_CELL_LINE_ATTR == 1:
-                            e_cell_fr_setpoints[e_cell_fr_setpoints < (m.SINGLE_CELL_LINE_ATTR_WIDTH/2) ] = m.SINGLE_CELL_LINE_ATTR_WIDTH/2
                         where_fr_is_0 = (e_cell_fr_setpoints == 0)
                         if m.SINGLE_CELL_LINE_ATTR == 2:
                             e_cell_fr_setpoints += m.SINGLE_CELL_LINE_ATTR_WIDTH/2
