@@ -1,13 +1,13 @@
 #!/bin/bash
 
 ## Presets
-#SBATCH --job-name=pop_single_adapting
+#SBATCH --job-name=cont_drop_1
 
 #SBATCH -p stf
 #SBATCH -A stf
 
 #SBATCH --nodes=1
-#SBATCH --time=9:00:00
+#SBATCH --time=8:00:00
 #SBATCH --ntasks=10
 #SBATCH --mem=100G
 
@@ -21,7 +21,7 @@ echo $CURRDIR
 cd //gscratch/stf/davidgbe/compneuro
 source davidgbe-env/bin/activate
 cd $CURRDIR
-python run.py --title uni_setpoint_long_TITLE --alpha_1 ALPHA_1 --alpha_2 ALPHA_2 --beta BETA --gamma GAMMA --fr_single_line_attr FR_LINE_ATTR --rng_seed SEED --dropout_per DROP_SEV --drop_iter 1000 &
+python run.py --title cont_drop_1b_TITLE --alpha_1 6e-2 --alpha_2 0.5e-2 --beta 5e-3 --gamma GAMMA --fr_single_line_attr 0 --rng_seed SEED --dropout_per 0.5 --load_run LOADED_RUN_NAME --drop_iter 50 &
 wait
 deactivate
 

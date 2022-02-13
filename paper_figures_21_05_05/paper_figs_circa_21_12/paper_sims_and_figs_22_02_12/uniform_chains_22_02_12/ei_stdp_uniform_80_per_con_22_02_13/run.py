@@ -26,8 +26,7 @@ cc = np.concatenate
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--title', metavar='T', type=str, nargs=1)
-parser.add_argument('--alpha_1', metavar='a1', type=float, nargs=1)
-parser.add_argument('--alpha_2', metavar='a2', type=float, nargs=1)
+parser.add_argument('--alpha', metavar='a1', type=float, nargs=1)
 parser.add_argument('--beta', metavar='b', type=float, nargs=1)
 parser.add_argument('--gamma', metavar='c', type=float, nargs=1)
 parser.add_argument('--fr_single_line_attr', metavar='s', type=int, nargs=1)
@@ -65,17 +64,17 @@ M = Generic(
     # syn rev potentials and decay times
     E_E=0, E_I=-.09, E_A=-.09, T_E=.004, T_I=.004, T_A=.006,
     
-    N_EXC=800,
+    N_EXC=1600,
     N_SILENT=0,
     N_INH=200,
     M=25,
     
     # Input params
     DRIVING_HZ=2, # 2 Hz lambda Poisson input to system
-    N_DRIVING_CELLS=10,
-    PROJECTION_NUM=10,
-    INPUT_STD=2e-3,
-    BURST_T=2e-3,
+    N_DRIVING_CELLS=20,
+    PROJECTION_NUM=20,
+    INPUT_STD=1e-3,
+    BURST_T=1.5e-3,
     INPUT_DELAY=50e-3,
     
     # OTHER INPUTS
@@ -89,12 +88,12 @@ M = Generic(
     I_E_CON_PROB=0.6,
 
     # Weights
-    W_E_I_R=5e-5 * 2.5/1.5,
-    W_E_I_R_MAX=15e-5,
-    W_I_E_R=0.5e-5,
-    W_A=2.5e-4,
-    W_E_E_R=0.26 * 0.004 * 1.,
-    W_E_E_R_MAX=0.26 * 0.004 * 30 * 1.,
+    W_E_I_R=6e-5,
+    W_E_I_R_MAX=12e-5,
+    W_I_E_R=0.9e-5,
+    W_A=2.5e-6,
+    W_E_E_R=0.26 * 0.004 * 0.65,
+    W_E_E_R_MAX=0.26 * 0.004 * 10 *  0.65,
     W_MIN=1e-8,
 
     # Dropout params
@@ -103,10 +102,9 @@ M = Generic(
     DROPOUT_SEV=args.dropout_per[0],
 
     SET_FR_FLAG=(args.load_run is None or args.load_run[0] is None),
-    E_SINGLE_FR_TRIALS=(2, 3),
-    I_SINGLE_FR_TRIALS=(6, 11),
-    POP_FR_TRIALS=(950, 990),
-    E_STDP_START=100,
+    E_SINGLE_FR_TRIALS=(1, 11),
+    POP_FR_TRIALS=(20, 30),
+    E_STDP_START=30,
 
     # Synaptic plasticity params
     TAU_STDP_PAIR_EE=30e-3,
@@ -115,18 +113,17 @@ M = Generic(
     SINGLE_CELL_FR_SETPOINT_MIN=10,
     SINGLE_CELL_FR_SETPOINT_MIN_STD=2,
     SINGLE_CELL_LINE_ATTR=args.fr_single_line_attr[0],
-    SINGLE_CELL_LINE_ATTR_WIDTH=4,
+    SINGLE_CELL_LINE_ATTR_WIDTH=2,
     ETA=0.3,
-    ALPHA_1=args.alpha_1[0], #3e-2
-    ALPHA_2=args.alpha_2[0],
+    ALPHA_1=args.alpha[0], #3e-2
     BETA=args.beta[0], #1e-3,
     GAMMA=args.gamma[0], #1e-4,
 )
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.1e-3, T=200e-3, EPOCHS=10000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.1e-3, T=400e-3, EPOCHS=10000)
 np.random.seed(S.RNG_SEED)
 
-M.W_U_E = 4e-4
+M.W_U_E = 0.26 * 0.004 * 0.2
 
 M.CUT_IDX_TAU_PAIR_EE = int(2 * M.TAU_STDP_PAIR_EE / S.DT)
 M.KERNEL_PAIR_EE = np.exp(-np.arange(M.CUT_IDX_TAU_PAIR_EE) * S.DT / M.TAU_STDP_PAIR_EE).astype(float)
@@ -257,6 +254,24 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
         ]),
     }
 
+    pairwise_spk_delays = np.block([
+        [int(2e-3 / S.DT) * np.ones((m.N_EXC, m.N_EXC)), int(0.2e-3 / S.DT) * np.ones((m.N_EXC, m.N_INH))],
+        [int(0.2e-3 / S.DT) * np.ones((m.N_INH, m.N_EXC + m.N_INH))],
+    ]).astype(int)
+
+    # turn pairwise delays into list of cells one cell is synapsed to with some delay tau
+    delay_maps = {}
+
+    for syn in w_r.keys():    
+        delay_map = []
+        for i in range(pairwise_spk_delays.shape[1]):
+            delay_map.append([[] for j in range(pairwise_spk_delays.max() + 1)])
+            for j in range(pairwise_spk_delays.shape[0]):
+                if w_r[syn][j, i] > 0:
+                    delay_map[-1][pairwise_spk_delays[j, i]].append(j)
+        delay_map = np.array(delay_map)
+        delay_maps[syn] = delay_map
+
     def create_prop(prop_exc, prop_inh):
         return cc([prop_exc * np.ones(m.N_EXC), prop_inh * np.ones(m.N_INH)])
 
@@ -345,14 +360,14 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                     t_s={'E': M.T_E, 'I': M.T_E, 'A': M.T_A},
                     w_r=w_r_copy,
                     w_u=w_u,
+                    pairwise_spk_delays=pairwise_spk_delays,
+                    delay_maps=delay_maps,
                 )
 
                 clamp = Generic(v={0: e_l}, spk={})
 
                 # run smln
-                rsp = ntwk.run(dt=S.DT, clamp=clamp, i_ext=i_ext,
-                                output_dir_name=f'{output_dir_name}_{rp_idx}_{d_idx}', spks_u=spks_u,
-                                dropouts=[], m=m, repairs=[])
+                rsp = ntwk.run(dt=S.DT, clamp=clamp, i_ext=i_ext, spks_u=spks_u )
 
 
                 # fig = plt.figure(figsize=(4, 4), tight_layout=True)
@@ -457,7 +472,7 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                 axs[0].scatter(inh_raster[0, :] * 1000, inh_raster[1, :], s=1, c='red', zorder=0, alpha=1)
 
                 axs[0].set_ylim(-1, m.N_EXC + m.N_INH)
-                axs[0].set_xlim(m.INPUT_DELAY * 1000, 300)
+                axs[0].set_xlim(m.INPUT_DELAY * 1000, S.T * 1000)
                 axs[0].set_ylabel('Cell Index')
                 axs[0].set_xlabel('Time (ms)')
 
@@ -563,8 +578,6 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
                         e_cell_fr_setpoints = e_cell_fr_setpoints / (m.E_SINGLE_FR_TRIALS[1] - m.E_SINGLE_FR_TRIALS[0])
                         if m.SINGLE_CELL_LINE_ATTR == 1:
                             e_cell_fr_setpoints[e_cell_fr_setpoints < (m.SINGLE_CELL_LINE_ATTR_WIDTH/2) ] = m.SINGLE_CELL_LINE_ATTR_WIDTH/2
-                        e_cell_fr_setpoints = 5 * np.ones(len(e_cell_fr_setpoints
-                        )) 
                         where_fr_is_0 = (e_cell_fr_setpoints == 0)
                         if m.SINGLE_CELL_LINE_ATTR == 2:
                             e_cell_fr_setpoints += m.SINGLE_CELL_LINE_ATTR_WIDTH/2

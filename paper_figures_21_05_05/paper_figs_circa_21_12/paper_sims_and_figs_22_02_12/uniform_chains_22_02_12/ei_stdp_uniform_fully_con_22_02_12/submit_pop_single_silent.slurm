@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## Presets
-#SBATCH --job-name=pop_single_adapting
+#SBATCH --job-name=fully_con
 
 #SBATCH -p stf
 #SBATCH -A stf
@@ -21,7 +21,7 @@ echo $CURRDIR
 cd //gscratch/stf/davidgbe/compneuro
 source davidgbe-env/bin/activate
 cd $CURRDIR
-python run.py --title settle_TITLE --alpha_1 ALPHA_1 --alpha_2 ALPHA_2 --beta BETA --gamma GAMMA --fr_single_line_attr FR_LINE_ATTR --rng_seed SEED --dropout_per DROP_SEV --drop_iter 3000 &
+python run.py --title settle_TITLE --alpha ALPHA_1 --beta BETA --gamma GAMMA --fr_single_line_attr FR_LINE_ATTR --rng_seed SEED --dropout_per DROP_SEV --drop_iter 1500 &
 wait
 deactivate
 
