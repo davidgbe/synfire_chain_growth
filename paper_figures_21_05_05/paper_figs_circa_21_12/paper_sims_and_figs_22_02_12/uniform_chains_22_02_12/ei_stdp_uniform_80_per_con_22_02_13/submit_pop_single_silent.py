@@ -78,7 +78,7 @@ params = OrderedDict()
 params['SEED'] = [str(i) for i in range(2090, 2140)]
 params['ALPHA_1'] = [ str(5e-2) ]
 params['BETA'] = [ str(1e-2) ]
-params['GAMMA'] = [ str(1e-2), str(5e-2) ]
+params['GAMMA'] = [ str(0), str(1e-2), str(5e-2) ]
 params['DROP_SEV'] = [ str(0.5) ]
 
 for key in params.keys():
