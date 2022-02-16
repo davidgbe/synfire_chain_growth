@@ -83,7 +83,7 @@ M = Generic(
     I_EXT_B=0,  # additional baseline current input
 
     # Connection probabilities
-    MEAN_N_CONS_PER_CELL=40,
+    MEAN_N_CONS_PER_CELL=120,
     SYN_PROP_DIST_EXP=args.synfire_prop_dist[0],
     CON_PROB_FF_CONST=1,
     CON_PROB_R=0.,
@@ -95,8 +95,8 @@ M = Generic(
     W_E_I_R_MAX=12e-5,
     W_I_E_R=0.5e-5,
     W_A=2.5e-6, #2.5e-6,
-    W_E_E_R=0.26 * 0.004 * 0.7,
-    W_E_E_R_MAX=0.26 * 0.004 * 10 * 0.7,
+    W_E_E_R=0.26 * 0.004 * 0.55,
+    W_E_E_R_MAX=0.26 * 0.004 * 30 * 0.55, # note changed this from 10 to 30
     W_MIN=1e-8,
 
     # Dropout params
@@ -187,7 +187,9 @@ def generate_exc_ff_chain(m):
         ### alpha * total_incoming_cons = gamma * n_cells_in_layer * sum_{i=0}^{current_layer} e^{-(current_layer - i)/tau}
         ### Solve the above for gamma
 
-        gamma = m.MEAN_N_CONS_PER_CELL * syn_prop / (m.PROJECTION_NUM * (1 - np.exp(-10/m.CON_PROB_FF_CONST))/(1 - np.exp(-1/m.CON_PROB_FF_CONST)))
+        target_n_cons = m.MEAN_N_CONS_PER_CELL * (1 - 0.66 * syn_prop)
+
+        gamma = target_n_cons * syn_prop / (m.PROJECTION_NUM * (1 - np.exp(-10/m.CON_PROB_FF_CONST))/(1 - np.exp(-1/m.CON_PROB_FF_CONST)))
 
         for i, l_idx in enumerate(reversed(range(layer_idx))):
             connected_cells_for_layer = mat_1_if_under_val(gamma * M.CON_PROBS_FF[i], (m.PROJECTION_NUM,))
@@ -196,15 +198,15 @@ def generate_exc_ff_chain(m):
 
             cons_for_cell[0, (l_idx * m.PROJECTION_NUM) : ((l_idx + 1) * m.PROJECTION_NUM)] = incoming_weights
 
-        diffs_after_1.append(m.MEAN_N_CONS_PER_CELL * syn_prop - np.count_nonzero(cons_for_cell))
-        n_rand_cons = m.MEAN_N_CONS_PER_CELL * (1 - syn_prop)
+        diffs_after_1.append(target_n_cons * syn_prop - np.count_nonzero(cons_for_cell))
+        n_rand_cons = target_n_cons * (1 - syn_prop)
 
         if layer_idx > 0:
-            cons_for_cell[0, :(layer_idx * m.PROJECTION_NUM)] += small_syn_scaling_factor * w * exponential_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (layer_idx * m.PROJECTION_NUM,), 0.25)
+            cons_for_cell[0, :(layer_idx * m.PROJECTION_NUM)] += small_syn_scaling_factor * w * lognormal_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (layer_idx * m.PROJECTION_NUM,), sigma=0.75)
         if layer_idx < n_layers - 1:
-            cons_for_cell[0, ((layer_idx + 1) * m.PROJECTION_NUM):m.N_EXC] += small_syn_scaling_factor * w * exponential_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (m.N_EXC - ((layer_idx + 1) * m.PROJECTION_NUM),), 0.25)
+            cons_for_cell[0, ((layer_idx + 1) * m.PROJECTION_NUM):m.N_EXC] += small_syn_scaling_factor * w * lognormal_if_under_val(n_rand_cons / (m.N_EXC - m.PROJECTION_NUM), (m.N_EXC - ((layer_idx + 1) * m.PROJECTION_NUM),), sigma=0.75)
 
-        diffs_after_2.append(m.MEAN_N_CONS_PER_CELL - np.count_nonzero(cons_for_cell))
+        diffs_after_2.append(target_n_cons - np.count_nonzero(cons_for_cell))
 
         synfire_props.append(syn_prop)
         num_cons.append(np.count_nonzero(cons_for_cell))
@@ -265,8 +267,11 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
         e_i_r = m.W_MIN * exponential_if_under_val(0.075, (m.N_INH, m.N_EXC), 0.25)
         e_i_r += gaussian_if_under_val(m.E_I_CON_PROB, (m.N_INH, m.N_EXC), m.W_E_I_R, 0.2 * m.W_E_I_R)
 
+        projections_to_terminal = np.ones((m.N_TERMINAL, m.PROJECTION_NUM))
+        projections_to_terminal[:, syn_props[-m.PROJECTION_NUM:] < 0.5] = 0
+
         e_t_r = np.block([
-            [ np.zeros((m.N_TERMINAL, m.N_EXC - m.PROJECTION_NUM)), m.W_E_I_R * np.ones((m.N_TERMINAL, m.PROJECTION_NUM)) ],
+            [ np.zeros((m.N_TERMINAL, m.N_EXC - m.PROJECTION_NUM)), m.W_E_I_R * projections_to_terminal ],
         ])
 
         w_r_e = np.block([

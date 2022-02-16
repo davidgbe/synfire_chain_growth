@@ -96,7 +96,7 @@ M = Generic(
     W_I_E_R=0.5e-5,
     W_A=2.5e-6, #2.5e-6,
     W_E_E_R=0.26 * 0.004 * 0.7,
-    W_E_E_R_MAX=0.26 * 0.004 * 10 * 0.7,
+    W_E_E_R_MAX=0.26 * 0.004 * 30 * 0.7,
     W_MIN=1e-8,
 
     # Dropout params
@@ -265,8 +265,11 @@ def run_test(m, output_dir_name, show_connectivity=True, repeats=1, n_show_only=
         e_i_r = m.W_MIN * exponential_if_under_val(0.075, (m.N_INH, m.N_EXC), 0.25)
         e_i_r += gaussian_if_under_val(m.E_I_CON_PROB, (m.N_INH, m.N_EXC), m.W_E_I_R, 0.2 * m.W_E_I_R)
 
+        projections_to_terminal = np.ones((m.N_TERMINAL, m.PROJECTION_NUM))
+        projections_to_terminal[:, syn_props[-m.PROJECTION_NUM:] < 0.5] = 0
+
         e_t_r = np.block([
-            [ np.zeros((m.N_TERMINAL, m.N_EXC - m.PROJECTION_NUM)), m.W_E_I_R * np.ones((m.N_TERMINAL, m.PROJECTION_NUM)) ],
+            [ np.zeros((m.N_TERMINAL, m.N_EXC - m.PROJECTION_NUM)), m.W_E_I_R * projections_to_terminal ],
         ])
 
         w_r_e = np.block([
