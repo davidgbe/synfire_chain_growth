@@ -98,7 +98,7 @@ params['SYN_PROP_DIST'] = [ str(12) ]
 params['DROP_SEV'] = [str(0.55), str(0.6), str(0.65)]
 params['LOADED_RUN_NAME'] = [d for d in all_dirs]
 
-seeds = [i + 2090 for i in range(len(params['LOADED_RUN_NAME']))]
+seeds = [str(i + 2090) for i in range(len(params['LOADED_RUN_NAME']))]
 
 run_name_to_seed = {}
 for i, d in enumerate(params['LOADED_RUN_NAME']):
