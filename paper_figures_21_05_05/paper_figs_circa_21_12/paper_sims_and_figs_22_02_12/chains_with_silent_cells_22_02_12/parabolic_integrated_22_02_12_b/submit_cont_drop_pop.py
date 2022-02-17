@@ -95,7 +95,7 @@ params['ALPHA_1'] = [ str(5e-2) ]
 params['BETA'] = [ str(1e-2) ]
 params['GAMMA'] = [ str(1e-2) ]
 params['SYN_PROP_DIST'] = [ str(12) ]
-params['DROP_SEV'] = [str(0.5)]
+params['DROP_SEV'] = [str(0.55), str(0.6), str(0.65)]
 params['LOADED_RUN_NAME'] = [d for d in all_dirs]
 
 seeds = np.arange(len(params['LOADED_RUN_NAME'])) + 2090
