@@ -188,6 +188,9 @@ def generate_exc_ff_chain(m):
         ### Solve the above for gamma
 
         gamma = m.MEAN_N_CONS_PER_CELL * syn_prop / (m.PROJECTION_NUM * (1 - np.exp(-10/m.CON_PROB_FF_CONST))/(1 - np.exp(-1/m.CON_PROB_FF_CONST)))
+        if syn_prop > 0.98:
+            print(gamma * M.CON_PROBS_FF[0])
+            print(gamma * M.CON_PROBS_FF[-1])
 
         for i, l_idx in enumerate(reversed(range(layer_idx))):
             connected_cells_for_layer = mat_1_if_under_val(gamma * M.CON_PROBS_FF[i], (m.PROJECTION_NUM,))
