@@ -65,7 +65,7 @@ M = Generic(
     # syn rev potentials and decay times
     E_E=0, E_I=-.09, E_A=-.07, T_E=.004, T_I=.004, T_A=.006,
     
-    N_EXC_OLD=300,
+    N_EXC_OLD=600,
     N_UVA=0,
     N_INH=200,
     M=20,
@@ -113,7 +113,7 @@ M = Generic(
     ALPHA_3=0,
     ALPHA_4=0.1,
     BETA_1=1,
-    BETA_2=5e-2,
+    BETA_2=1e-2,
 
     HETERO_COMP_MECH=args.hetero_comp_mech[0],
     STDP_TYPE=args.stdp_type[0],
@@ -121,7 +121,7 @@ M = Generic(
 
 print(M.HETERO_COMP_MECH)
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=300e-3, EPOCHS=5000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=500e-3, EPOCHS=5000)
 np.random.seed(S.RNG_SEED)
 
 M.SUMMED_W_E_E_R_MAX = 10 * M.W_E_E_R_MAX
@@ -461,7 +461,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
         axs[0].scatter(inh_raster[0, :] * 1000, inh_raster[1, :] - m.N_UVA, s=1, c='red', zorder=0, alpha=1)
 
         axs[0].set_ylim(-1, m.N_EXC + m.N_INH)
-        axs[0].set_xlim(m.INPUT_DELAY * 1000, 300)
+        axs[0].set_xlim(m.INPUT_DELAY * 1000, 500)
         axs[0].set_ylabel('Cell Index')
         axs[0].set_xlabel('Time (ms)')
 
