@@ -656,12 +656,12 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 #     }
                 #     base_data_to_save.update(update_obj)
 
-                # if i_e % 100 == 0:
-                #     update_obj = {
-                #         'w_r_e': rsp.ntwk.w_r['E'],
-                #         'w_r_i': rsp.ntwk.w_r['I'],
-                #     }
-                #     base_data_to_save.update(update_obj)
+                if i_e % 10 == 0:
+                    update_obj = {
+                        'w_r_e': rsp.ntwk.w_r['E'],
+                        'w_r_i': rsp.ntwk.w_r['I'],
+                    }
+                    base_data_to_save.update(update_obj)
 
                 sio.savemat(robustness_output_dir + '/' + f'title_{title}_idx_{zero_pad(i_e, 4)}', base_data_to_save)
 
