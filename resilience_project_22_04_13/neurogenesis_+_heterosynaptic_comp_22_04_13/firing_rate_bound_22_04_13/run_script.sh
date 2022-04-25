@@ -1,3 +1,3 @@
 #!/bin/bash
 
-caffeinate python3 run.py --title sweep_2_w_e_i_7e-5 --index 0 --rng_seed $1 --dropout_per 0 --w_ee 2e-3 --w_ei 7e-5 --w_ie 7.5e-5
+caffeinate python3 run.py --title $1 --index 0 --rng_seed $3 --hetero_comp_mech $1 --stdp_type w_minus --dropout_per $2 --w_ee 0.8e-3 --w_ei 2.5e-5 --w_ie 9e-5
