@@ -65,7 +65,8 @@ M = Generic(
     # syn rev potentials and decay times
     E_E=0, E_I=-.09, E_A=-.07, T_E=.004, T_I=.004, T_A=.006,
     
-    N_EXC=400,
+    N_EXC_OLD=300,
+    N_UVA=0,
     N_INH=200,
     M=20,
     
@@ -92,14 +93,15 @@ M = Generic(
     W_A=0,
     W_E_E_R=args.w_ee[0],
     W_E_E_R_MIN=1e-6,
-    W_E_E_R_MAX=1e-4,
+    W_E_E_R_MAX=5e-4,
     SUPER_SYNAPSE_SIZE=1.5e-3,
 
     # Dropout params
     DROPOUT_MIN_IDX=0,
     DROPOUT_MAX_IDX=0, # set elsewhere
-    DROPOUT_ITER=1000,
+    DROPOUT_ITER=50,
     DROPOUT_SEV=args.dropout_per[0],
+    RANDOM_SYN_ADD_ITERS=[i for i in range(51, 90)],
 
     # Synaptic plasticity params
     TAU_STDP_PAIR_EE=15e-3,
@@ -111,7 +113,7 @@ M = Generic(
     ALPHA_3=0,
     ALPHA_4=0.1,
     BETA_1=1,
-    BETA_2=1e-3,
+    BETA_2=1e-1,
 
     HETERO_COMP_MECH=args.hetero_comp_mech[0],
     STDP_TYPE=args.stdp_type[0],
@@ -119,13 +121,14 @@ M = Generic(
 
 print(M.HETERO_COMP_MECH)
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=300e-3, EPOCHS=5000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=600e-3, EPOCHS=5000)
 np.random.seed(S.RNG_SEED)
 
 M.SUMMED_W_E_E_R_MAX = 10 * M.W_E_E_R_MAX
 M.W_U_E = 0.26 * 0.004
 
-M.N_UVA = 0
+M.N_EXC_NEW = int(M.N_EXC_OLD * M.DROPOUT_SEV)
+M.N_EXC = M.N_EXC_OLD + M.N_EXC_NEW
 
 M.CUT_IDX_TAU_PAIR_EE = int(3 * M.TAU_STDP_PAIR_EE / S.DT)
 kernel_base_ee = np.arange(2 * M.CUT_IDX_TAU_PAIR_EE + 1) - M.CUT_IDX_TAU_PAIR_EE
@@ -149,7 +152,7 @@ print('T_M_E =', 1000*M.C_M_E/M.G_L_E, 'ms')  # E cell membrane time constant (C
 
 def ff_unit_func(m):
     w = m.W_E_E_R / m.PROJECTION_NUM
-    return gaussian_if_under_val(1, (m.PROJECTION_NUM, m.PROJECTION_NUM), w, 0)
+    return gaussian_if_under_val(0.7, (m.PROJECTION_NUM, m.PROJECTION_NUM), w, 0)
 
 def generate_ff_chain(size, unit_size, unit_funcs, ff_deg=[0, 1], tempering=[1., 1.]):
     if size % unit_size != 0:
@@ -187,33 +190,38 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
     os.makedirs(sampled_cell_output_dir)
     
     w_u_proj = np.diag(np.ones(m.N_DRIVING_CELLS)) * m.W_U_E * 0.5
-    w_u_uva = np.diag(np.ones(m.N_UVA)) * m.W_U_E * 1.5 * 0
+    w_u_uva = np.diag(np.ones(m.N_EXC_OLD - m.N_DRIVING_CELLS)) * m.W_U_E * 0
 
-    w_u_e = np.zeros([m.N_EXC + m.N_UVA, m.N_DRIVING_CELLS + m.N_UVA])
+    w_u_e = np.zeros([m.N_EXC_OLD, m.N_EXC_OLD])
     w_u_e[:m.N_DRIVING_CELLS, :m.N_DRIVING_CELLS] += w_u_proj
-    w_u_e[m.N_EXC:(m.N_EXC + m.N_UVA), m.N_DRIVING_CELLS:(m.N_DRIVING_CELLS + m.N_UVA)] += w_u_uva
+    w_u_e[m.N_DRIVING_CELLS:m.N_EXC_OLD, m.N_DRIVING_CELLS:m.N_EXC_OLD] += w_u_uva
 
     ## input weights
     w_u = {
         # localized inputs to trigger activation from start of chain
         'E': np.block([
             [ w_u_e ],
-            [ np.zeros([m.N_INH, m.N_DRIVING_CELLS + m.N_UVA]) ],
+            [ np.zeros([m.N_EXC_NEW + m.N_INH, m.N_EXC_OLD]) ],
         ]),
 
-        'I': np.zeros((m.N_EXC + m.N_UVA + m.N_INH, m.N_DRIVING_CELLS + m.N_UVA)),
+        'I': np.zeros((m.N_EXC + m.N_INH, m.N_EXC_OLD)),
 
-        'A': np.zeros((m.N_EXC + m.N_UVA + m.N_INH, m.N_DRIVING_CELLS + m.N_UVA)),
+        'A': np.zeros((m.N_EXC + m.N_INH, m.N_EXC_OLD)),
     }
 
     def unit_func():
         return ff_unit_func(m)
 
     if w_r_e is None:
-        w_e_e_r = generate_ff_chain(m.N_EXC, m.PROJECTION_NUM, [unit_func] * 1, ff_deg=np.arange(1) + 1, tempering=[1])
-        np.fill_diagonal(w_e_e_r, 0.)
+        w_e_e_r_chain = generate_ff_chain(m.N_EXC_OLD, m.PROJECTION_NUM, [unit_func] * 1, ff_deg=np.arange(1) + 1, tempering=[1])
+        np.fill_diagonal(w_e_e_r_chain, 0.)
+
+        w_e_e_r = np.zeros((m.N_EXC, m.N_EXC))
+        w_e_e_r[:m.N_EXC_OLD, :m.N_EXC_OLD] = w_e_e_r_chain
 
         e_i_r = gaussian_if_under_val(m.E_I_CON_PROB, (m.N_INH, m.N_EXC), m.W_E_I_R, 0)
+        e_i_r[:, m.N_EXC_OLD:] = 0
+        e_i_r[:, m.N_EXC_OLD - m.PROJECTION_NUM:m.N_EXC_OLD] = gaussian_if_under_val(0.2, (m.N_INH, m.PROJECTION_NUM), m.W_E_I_R, 0)
 
         w_r_e = np.block([
             [ w_e_e_r, np.zeros((m.N_EXC, m.N_INH)) ],
@@ -222,7 +230,8 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
 
     if w_r_i is None:
 
-        i_e_r = gaussian_if_under_val(m.I_E_CON_PROB, (m.N_EXC, m.N_INH), 0.5 * m.W_I_E_R, 0)
+        i_e_r = gaussian_if_under_val(m.I_E_CON_PROB, (m.N_EXC, m.N_INH), m.W_I_E_R, 0)
+        i_e_r[m.N_EXC_OLD - m.PROJECTION_NUM:, :] = 0
 
         w_r_i = np.block([
             [ np.zeros((m.N_EXC, m.N_EXC + m.N_UVA)), i_e_r],
@@ -242,17 +251,21 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
     ee_connectivity = np.where(w_r_e[:(m.N_EXC), :(m.N_EXC + m.N_UVA)] > 0, 1, 0)
 
     pairwise_spk_delays = np.block([
-        [int(2.2e-3 / S.DT) * np.ones((m.N_EXC, m.N_EXC)), np.ones((m.N_EXC, m.N_UVA)), int(0.5e-3 / S.DT) * np.ones((m.N_EXC, m.N_INH))],
+        [int(3.5e-3 / S.DT) * np.ones((m.N_EXC, m.N_EXC)), np.ones((m.N_EXC, m.N_UVA)), int(0.5e-3 / S.DT) * np.ones((m.N_EXC, m.N_INH))],
         [int(0.5e-3 / S.DT) * np.ones((m.N_INH + m.N_UVA, m.N_EXC + m.N_INH + m.N_UVA))],
     ]).astype(int)
 
     # turn pairwise delays into list of cells one cell is synapsed to with some delay tau
    
-    delay_map = {}
-    summed_w_r_abs = np.sum(np.stack([np.abs(w_r[syn]) for syn in w_r.keys()]), axis=0)
-    for i in range(pairwise_spk_delays.shape[1]):
-        cons = summed_w_r_abs[:, i].nonzero()[0]
-        delay_map[i] = (pairwise_spk_delays[cons, i], cons)
+    def make_delay_map(w_r):
+        delay_map = {}
+        summed_w_r_abs = np.sum(np.stack([np.abs(w_r[syn]) for syn in w_r.keys()]), axis=0)
+        for i in range(pairwise_spk_delays.shape[1]):
+            cons = summed_w_r_abs[:, i].nonzero()[0]
+            delay_map[i] = (pairwise_spk_delays[cons, i], cons)
+        return delay_map
+
+    delay_map = make_delay_map(w_r)
 
     def create_prop(prop_exc, prop_inh):
         return cc([prop_exc * np.ones(m.N_EXC + m.N_UVA), prop_inh * np.ones(m.N_INH)])
@@ -279,7 +292,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
     # snapshot = None
     # last_snapshot = tracemalloc.take_snapshot()
 
-    e_cell_pop_fr_measurements = None
+    surviving_cell_mask = None
 
     for i_e in range(epochs):
 
@@ -290,8 +303,27 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
         start = time.time()
 
         if i_e == m.DROPOUT_ITER:
-            w_r_copy['E'][:(m.N_EXC + m.N_UVA + m.N_INH), :m.N_EXC], surviving_cell_indices = dropout_on_mat(w_r_copy['E'][:(m.N_EXC + m.N_UVA + m.N_INH), :m.N_EXC], dropout['E'], min_idx=m.DROPOUT_MIN_IDX, max_idx=m.DROPOUT_MAX_IDX)
+            w_r_copy['E'][:(m.N_EXC + m.N_UVA + m.N_INH), :m.N_EXC], surviving_cell_mask = dropout_on_mat(w_r_copy['E'][:(m.N_EXC + m.N_UVA + m.N_INH), :m.N_EXC], dropout['E'], min_idx=m.DROPOUT_MIN_IDX, max_idx=m.DROPOUT_MAX_IDX)
+            surviving_cell_mask[np.arange(m.N_EXC) >= m.N_EXC_OLD] = 1
+            surviving_cell_mask = surviving_cell_mask.astype(bool)
             ee_connectivity = np.where(w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)] > 0, 1, 0)
+
+        if i_e in m.RANDOM_SYN_ADD_ITERS:
+            growth_prob = 0.0005
+            new_synapses = gaussian_if_under_val(growth_prob, (m.N_EXC, m.N_EXC), 0.5 * m.W_E_E_R / M.PROJECTION_NUM, 0)
+            new_synapses[~surviving_cell_mask, :] = 0
+            new_synapses[:, ~surviving_cell_mask] = 0
+            new_synapses[ee_connectivity] = 0
+            w_r_copy['E'][:m.N_EXC, :m.N_EXC] += new_synapses
+            ee_connectivity = np.where(w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)] > 0, 1, 0)
+
+
+            w_r_copy['E'][(m.N_EXC + m.N_UVA):, m.N_EXC_OLD:m.N_EXC] += gaussian_if_under_val(growth_prob, (m.N_INH, m.N_EXC_NEW), m.W_E_I_R, 0)
+
+            w_r_copy['I'][m.N_EXC_OLD:m.N_EXC, (m.N_EXC + m.N_UVA):] += gaussian_if_under_val(10 * growth_prob, (m.N_EXC_NEW, m.N_INH), m.W_I_E_R, 0)
+
+
+            delay_map = make_delay_map(w_r_copy)
 
         t = np.arange(0, S.T, S.DT)
 
@@ -302,14 +334,13 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
             i_ext = m.I_EXT_B * np.ones((len(t), m.N_EXC + m.N_UVA + m.N_INH))
 
         ## inp spks
-        spks_u_base = np.zeros((len(t), m.N_DRIVING_CELLS + m.N_UVA), dtype=int)
+        spks_u_base = np.zeros((len(t), m.N_EXC_OLD), dtype=int)
 
         # trigger inputs
         activation_times = np.zeros((len(t), m.N_DRIVING_CELLS))
         for t_ctr in np.arange(0, S.T, 1./m.DRIVING_HZ):
             activation_times[int(t_ctr/S.DT), :] = 1
 
-        np.concatenate([np.random.poisson(m.DRIVING_HZ * S.DT, size=(len(t), 1)) for i in range(m.N_DRIVING_CELLS)], axis=1)
         spks_u = copy(spks_u_base)
         spks_u[:, :m.N_DRIVING_CELLS] = np.zeros((len(t), m.N_DRIVING_CELLS))
         burst_t = np.arange(0, 5 * int(m.BURST_T / S.DT), int(m.BURST_T / S.DT))
@@ -326,8 +357,8 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
             x[int(offset/S.DT):int(offset/S.DT) + int(dur/S.DT)] = np.random.poisson(lam=10 * S.DT, size=int(dur/S.DT))
             return x
 
-        # uva_spks_base = np.random.poisson(lam=20 * S.DT, size=len(t))
-        # spks_u[:, m.N_DRIVING_CELLS:(m.N_DRIVING_CELLS + m.N_UVA)] = np.stack([make_poisson_input() for i in range(m.N_UVA)]).T
+        uva_spks_base = np.random.poisson(lam=20 * S.DT, size=len(t))
+        spks_u[:, m.N_DRIVING_CELLS:m.N_EXC_OLD] = np.stack([make_poisson_input() for i in range(m.N_EXC_OLD - m.N_DRIVING_CELLS)]).T
 
         ntwk = LIFNtwkG(
             c_m=c_m,
@@ -371,11 +402,22 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
             fig.savefig(f'{sampled_cell_output_dir}/sampled_cell_rasters_{int(i_e / sampled_trial_number)}.png')
 
         scale = 0.8
-        gs = gridspec.GridSpec(10, 1)
+        gs = gridspec.GridSpec(12, 1)
         fig = plt.figure(figsize=(9 * scale, 25 * scale), tight_layout=True)
-        axs = [fig.add_subplot(gs[:2]), fig.add_subplot(gs[2]), fig.add_subplot(gs[3]), fig.add_subplot(gs[4]), fig.add_subplot(gs[5]), fig.add_subplot(gs[6:8]), fig.add_subplot(gs[8:])]
+        axs = [
+            fig.add_subplot(gs[:2]),
+            fig.add_subplot(gs[2]),
+            fig.add_subplot(gs[3]),
+            fig.add_subplot(gs[4]),
+            fig.add_subplot(gs[5]),
+            fig.add_subplot(gs[6:8]),
+            fig.add_subplot(gs[8:10]),
+            fig.add_subplot(gs[10:])
+        ]
 
         w_e_e_r_copy = w_r_copy['E'][:m.N_EXC, :m.N_EXC]
+        if surviving_cell_mask is not None:
+            w_e_e_r_copy = w_e_e_r_copy[surviving_cell_mask, :]
 
         # 0.05 * np.mean(w_e_e_r_copy.sum(axis=1)
         summed_w_bins, summed_w_counts = bin_occurrences(w_e_e_r_copy.sum(axis=1), bin_size=1e-4)
@@ -419,13 +461,12 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
         axs[0].scatter(inh_raster[0, :] * 1000, inh_raster[1, :] - m.N_UVA, s=1, c='red', zorder=0, alpha=1)
 
         axs[0].set_ylim(-1, m.N_EXC + m.N_INH)
-        axs[0].set_xlim(m.INPUT_DELAY * 1000, 300)
+        axs[0].set_xlim(m.INPUT_DELAY * 1000, 600)
         axs[0].set_ylabel('Cell Index')
         axs[0].set_xlabel('Time (ms)')
 
         for i in range(len(axs)):
             set_font_size(axs[i], 14)
-        fig.savefig(f'{output_dir}/{zero_pad(i_e, 4)}.png')
 
         first_spk_times = process_single_activation(exc_raster, m)
 
@@ -462,9 +503,8 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 stdp_start_ee = i_t - m.CUT_IDX_TAU_PAIR_EE if i_t - m.CUT_IDX_TAU_PAIR_EE > 0 else 0
                 stdp_end_ee = i_t + m.CUT_IDX_TAU_PAIR_EE if i_t + m.CUT_IDX_TAU_PAIR_EE < spks_for_e_cells.shape[0] else (spks_for_e_cells.shape[0] - 1)
 
-                trimmed_kernel_ee_plus = m.KERNEL_PAIR_EE[M.CUT_IDX_TAU_PAIR_EE:M.CUT_IDX_TAU_PAIR_EE + (i_t - stdp_start_ee)]
-                trimmed_kernel_ee_minus = m.KERNEL_PAIR_EE[M.CUT_IDX_TAU_PAIR_EE - (stdp_end_ee - i_t):M.CUT_IDX_TAU_PAIR_EE]
-
+                trimmed_kernel_ee_plus = np.flip(m.KERNEL_PAIR_EE[M.CUT_IDX_TAU_PAIR_EE:M.CUT_IDX_TAU_PAIR_EE + (i_t - stdp_start_ee)])
+                trimmed_kernel_ee_minus = np.flip(m.KERNEL_PAIR_EE[M.CUT_IDX_TAU_PAIR_EE - (stdp_end_ee - i_t):M.CUT_IDX_TAU_PAIR_EE])
 
                 for curr_spk_e in curr_spks_e.nonzero()[0]:
                     sparse_spks_received_e_plus = csc_matrix(filtered_spks_received_for_e_cells[stdp_start_ee:i_t, curr_spk_e, :])
@@ -479,6 +519,10 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 w_r_copy['E'][:m.N_EXC, :(m.N_EXC + m.N_UVA)] += (m.ETA * m.BETA_2 * stdp_burst_pair_e_e_minus * w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)])
                 w_r_copy['E'][:m.N_EXC, :(m.N_EXC + m.N_UVA)] += (m.ETA * m.BETA_2 * stdp_burst_pair_e_e_plus * (m.W_E_E_R_MAX * ee_connectivity - w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)]))
 
+            stdp_weight_change = stdp_burst_pair_e_e_plus * (m.W_E_E_R_MAX * ee_connectivity - w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)])
+            stdp_weight_change += stdp_burst_pair_e_e_minus * w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)]
+
+            graph_weight_matrix(stdp_weight_change, 'stdp weight change\n', ax=axs[7])
 
             # HETEROSYNAPTIC COMPETITION RULES
 
@@ -530,7 +574,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
             #     e_cell_pop_fr_setpoint = e_cell_pop_fr_measurements / (m.POP_FR_TRIALS[1] - m.POP_FR_TRIALS[0])
             # elif i_e > m.POP_FR_TRIALS[1]:
             #     if i_e >= m.DROPOUT_ITER:
-            #         current_summed_spks = np.sum(spks_for_e_cells[:, surviving_cell_indices.astype(bool)])
+            #         current_summed_spks = np.sum(spks_for_e_cells[:, surviving_cell_mask.astype(bool)])
             #     else:
             #         current_summed_spks = np.sum(spks_for_e_cells)
             #     fr_pop_diff = e_cell_pop_fr_setpoint - current_summed_spks
@@ -602,13 +646,13 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                     base_data_to_save['e_cell_pop_fr_setpoint'] = e_cell_pop_fr_setpoint
 
                 if i_e >= m.DROPOUT_ITER:
-                    base_data_to_save['surviving_cell_indices'] = surviving_cell_indices
+                    base_data_to_save['surviving_cell_mask'] = surviving_cell_mask
 
                 # if i_e >= m.DROPOUT_ITER:
                 #     update_obj = {
                 #         'exc_cells_initially_active': exc_cells_initially_active,
                 #         'exc_cells_newly_active': exc_cells_newly_active,
-                #         'surviving_cell_indices': surviving_cell_indices,
+                #         'surviving_cell_mask': surviving_cell_mask,
                 #     }
                 #     base_data_to_save.update(update_obj)
 
@@ -620,6 +664,8 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 #     base_data_to_save.update(update_obj)
 
                 sio.savemat(robustness_output_dir + '/' + f'title_{title}_idx_{zero_pad(i_e, 4)}', base_data_to_save)
+
+        fig.savefig(f'{output_dir}/{zero_pad(i_e, 4)}.png')
 
         end = time.time()
         secs_per_cycle = f'{end - start}'
