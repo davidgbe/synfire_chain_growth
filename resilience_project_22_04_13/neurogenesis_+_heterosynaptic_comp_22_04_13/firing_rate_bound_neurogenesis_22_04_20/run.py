@@ -113,7 +113,7 @@ M = Generic(
     ALPHA_3=0,
     ALPHA_4=0.1,
     BETA_1=1,
-    BETA_2=1e-1,
+    BETA_2=5e-2,
 
     HETERO_COMP_MECH=args.hetero_comp_mech[0],
     STDP_TYPE=args.stdp_type[0],
@@ -121,7 +121,7 @@ M = Generic(
 
 print(M.HETERO_COMP_MECH)
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=600e-3, EPOCHS=5000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=300e-3, EPOCHS=5000)
 np.random.seed(S.RNG_SEED)
 
 M.SUMMED_W_E_E_R_MAX = 10 * M.W_E_E_R_MAX
@@ -221,7 +221,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
 
         e_i_r = gaussian_if_under_val(m.E_I_CON_PROB, (m.N_INH, m.N_EXC), m.W_E_I_R, 0)
         e_i_r[:, m.N_EXC_OLD:] = 0
-        e_i_r[:, m.N_EXC_OLD - m.PROJECTION_NUM:m.N_EXC_OLD] = gaussian_if_under_val(0.2, (m.N_INH, m.PROJECTION_NUM), m.W_E_I_R, 0)
+        e_i_r[:, m.N_EXC_OLD - m.PROJECTION_NUM:m.N_EXC_OLD] = gaussian_if_under_val(0.1, (m.N_INH, m.PROJECTION_NUM), m.W_E_I_R, 0)
 
         w_r_e = np.block([
             [ w_e_e_r, np.zeros((m.N_EXC, m.N_INH)) ],
@@ -461,7 +461,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
         axs[0].scatter(inh_raster[0, :] * 1000, inh_raster[1, :] - m.N_UVA, s=1, c='red', zorder=0, alpha=1)
 
         axs[0].set_ylim(-1, m.N_EXC + m.N_INH)
-        axs[0].set_xlim(m.INPUT_DELAY * 1000, 600)
+        axs[0].set_xlim(m.INPUT_DELAY * 1000, 300)
         axs[0].set_ylabel('Cell Index')
         axs[0].set_xlabel('Time (ms)')
 
