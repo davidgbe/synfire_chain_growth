@@ -99,9 +99,9 @@ M = Generic(
     # Dropout params
     DROPOUT_MIN_IDX=0,
     DROPOUT_MAX_IDX=0, # set elsewhere
-    DROPOUT_ITER=50,
+    DROPOUT_ITER=200,
     DROPOUT_SEV=args.dropout_per[0],
-    RANDOM_SYN_ADD_ITERS=[i for i in range(51, 90)],
+    RANDOM_SYN_ADD_ITERS=[i for i in range(201, 240)],
 
     # Synaptic plasticity params
     TAU_STDP_PAIR_EE=15e-3,
@@ -111,7 +111,7 @@ M = Generic(
     ALPHA_1=1,
     ALPHA_2=0,
     ALPHA_3=0,
-    ALPHA_4=0.1,
+    ALPHA_4=0.15,
     BETA_1=1,
     BETA_2=1e-2,
 
@@ -656,7 +656,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 #     }
                 #     base_data_to_save.update(update_obj)
 
-                if i_e % 2 == 0:
+                if i_e % 10 == 0:
                     update_obj = {
                         'w_r_e': rsp.ntwk.w_r['E'],
                         'w_r_i': rsp.ntwk.w_r['I'],
