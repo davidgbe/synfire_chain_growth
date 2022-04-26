@@ -99,9 +99,9 @@ M = Generic(
     # Dropout params
     DROPOUT_MIN_IDX=0,
     DROPOUT_MAX_IDX=0, # set elsewhere
-    DROPOUT_ITER=200,
+    DROPOUT_ITER=10,
     DROPOUT_SEV=args.dropout_per[0],
-    RANDOM_SYN_ADD_ITERS=[i for i in range(201, 240)],
+    RANDOM_SYN_ADD_ITERS=[i for i in range(11, 51)],
 
     # Synaptic plasticity params
     TAU_STDP_PAIR_EE=15e-3,
@@ -303,7 +303,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
         start = time.time()
 
         if i_e == m.DROPOUT_ITER:
-            w_r_copy['E'][:(m.N_EXC + m.N_UVA + m.N_INH), :m.N_EXC_OLD], surviving_cell_mask = dropout_on_mat(w_r_copy['E'][:(m.N_EXC + m.N_UVA + m.N_INH), :m.N_EXC_OLD], dropout['E'], min_idx=m.DROPOUT_MIN_IDX, max_idx=m.DROPOUT_MAX_IDX)
+            w_r_copy['E'][:(m.N_EXC + m.N_UVA + m.N_INH), :m.N_EXC_OLD], surviving_cell_mask = dropout_on_mat(w_r_copy['E'][:(m.N_EXC + m.N_UVA + m.N_INH), :m.N_EXC_OLD], dropout['E'])
             surviving_cell_mask = np.concatenate([surviving_cell_mask, np.ones(m.N_EXC_NEW)])
             surviving_cell_mask = surviving_cell_mask.astype(bool)
             ee_connectivity = np.where(w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)] > 0, 1, 0)
