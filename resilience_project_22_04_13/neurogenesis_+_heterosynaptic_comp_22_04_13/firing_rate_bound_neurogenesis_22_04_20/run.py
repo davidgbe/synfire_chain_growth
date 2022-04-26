@@ -99,19 +99,19 @@ M = Generic(
     # Dropout params
     DROPOUT_MIN_IDX=0,
     DROPOUT_MAX_IDX=0, # set elsewhere
-    DROPOUT_ITER=50,
+    DROPOUT_ITER=200,
     DROPOUT_SEV=args.dropout_per[0],
-    RANDOM_SYN_ADD_ITERS=[i for i in range(51, 90)],
+    RANDOM_SYN_ADD_ITERS=[i for i in range(201, 240)],
 
     # Synaptic plasticity params
     TAU_STDP_PAIR_EE=15e-3,
     TAU_STDP_PAIR_EI=2e-3,
 
-    ETA=1.,
+    ETA=0.1,
     ALPHA_1=1,
     ALPHA_2=0,
     ALPHA_3=0,
-    ALPHA_4=0.1,
+    ALPHA_4=0.15,
     BETA_1=1,
     BETA_2=1e-2,
 
@@ -303,8 +303,8 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
         start = time.time()
 
         if i_e == m.DROPOUT_ITER:
-            w_r_copy['E'][:(m.N_EXC + m.N_UVA + m.N_INH), :m.N_EXC], surviving_cell_mask = dropout_on_mat(w_r_copy['E'][:(m.N_EXC + m.N_UVA + m.N_INH), :m.N_EXC], dropout['E'], min_idx=m.DROPOUT_MIN_IDX, max_idx=m.DROPOUT_MAX_IDX)
-            surviving_cell_mask[np.arange(m.N_EXC) >= m.N_EXC_OLD] = 1
+            w_r_copy['E'][:(m.N_EXC + m.N_UVA + m.N_INH), :m.N_EXC_OLD], surviving_cell_mask = dropout_on_mat(w_r_copy['E'][:(m.N_EXC + m.N_UVA + m.N_INH), :m.N_EXC_OLD], dropout['E'], min_idx=m.DROPOUT_MIN_IDX, max_idx=m.DROPOUT_MAX_IDX)
+            surviving_cell_mask = np.concatenate([surviving_cell_mask, np.ones(m.N_EXC_NEW)])
             surviving_cell_mask = surviving_cell_mask.astype(bool)
             ee_connectivity = np.where(w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)] > 0, 1, 0)
 
@@ -318,7 +318,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
             ee_connectivity = np.where(w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)] > 0, 1, 0)
 
 
-            w_r_copy['E'][(m.N_EXC + m.N_UVA):, m.N_EXC_OLD:m.N_EXC] += gaussian_if_under_val(growth_prob, (m.N_INH, m.N_EXC_NEW), m.W_E_I_R, 0)
+            w_r_copy['E'][(m.N_EXC + m.N_UVA):, m.N_EXC_OLD:m.N_EXC] += gaussian_if_under_val(2 * growth_prob, (m.N_INH, m.N_EXC_NEW), m.W_E_I_R, 0)
 
             w_r_copy['I'][m.N_EXC_OLD:m.N_EXC, (m.N_EXC + m.N_UVA):] += gaussian_if_under_val(10 * growth_prob, (m.N_EXC_NEW, m.N_INH), m.W_I_E_R, 0)
 
