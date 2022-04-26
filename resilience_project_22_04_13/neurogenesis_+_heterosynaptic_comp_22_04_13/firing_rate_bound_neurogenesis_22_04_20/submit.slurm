@@ -7,7 +7,7 @@
 #SBATCH -A stf
 
 #SBATCH --nodes=1
-#SBATCH --time=4:00:00
+#SBATCH --time=2:00:00
 #SBATCH --ntasks=1
 #SBATCH --mem=50G
 
@@ -21,7 +21,7 @@ echo $CURRDIR
 cd //gscratch/stf/davidgbe/compneuro
 source davidgbe-env/bin/activate
 cd $CURRDIR
-python run.py --title stdp_rand_syn_slow_2 --index INDEX --rng_seed SEED --hetero_comp_mech firing_rate --stdp_type w_minus --dropout_per DROP_SEV --w_ee W_E_E --w_ei W_E_I --w_ie W_I_E
+python run.py --title stdp_rand_syn_slow_3 --index INDEX --rng_seed SEED --hetero_comp_mech firing_rate --stdp_type w_minus --dropout_per DROP_SEV --w_ee W_E_E --w_ei W_E_I --w_ie W_I_E
 wait
 deactivate
 

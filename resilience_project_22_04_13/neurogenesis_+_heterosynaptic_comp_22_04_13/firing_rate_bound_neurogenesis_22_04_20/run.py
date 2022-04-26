@@ -99,9 +99,9 @@ M = Generic(
     # Dropout params
     DROPOUT_MIN_IDX=0,
     DROPOUT_MAX_IDX=0, # set elsewhere
-    DROPOUT_ITER=10,
+    DROPOUT_ITER=20,
     DROPOUT_SEV=args.dropout_per[0],
-    RANDOM_SYN_ADD_ITERS=[i for i in range(11, 51)],
+    RANDOM_SYN_ADD_ITERS=[i for i in range(21, 61)],
 
     # Synaptic plasticity params
     TAU_STDP_PAIR_EE=15e-3,
@@ -318,7 +318,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
             ee_connectivity = np.where(w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)] > 0, 1, 0)
 
 
-            w_r_copy['E'][(m.N_EXC + m.N_UVA):, m.N_EXC_OLD:m.N_EXC] += gaussian_if_under_val(2 * growth_prob, (m.N_INH, m.N_EXC_NEW), m.W_E_I_R, 0)
+            w_r_copy['E'][(m.N_EXC + m.N_UVA):, m.N_EXC_OLD:m.N_EXC] += gaussian_if_under_val(growth_prob, (m.N_INH, m.N_EXC_NEW), m.W_E_I_R, 0)
 
             w_r_copy['I'][m.N_EXC_OLD:m.N_EXC, (m.N_EXC + m.N_UVA):] += gaussian_if_under_val(10 * growth_prob, (m.N_EXC_NEW, m.N_INH), m.W_I_E_R, 0)
 
