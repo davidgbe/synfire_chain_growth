@@ -101,13 +101,13 @@ M = Generic(
     DROPOUT_MAX_IDX=0, # set elsewhere
     DROPOUT_ITER=20,
     DROPOUT_SEV=args.dropout_per[0],
-    RANDOM_SYN_ADD_ITERS=[i for i in range(21, 61)],
+    RANDOM_SYN_ADD_ITERS=[i for i in range(21, 101)],
 
     # Synaptic plasticity params
     TAU_STDP_PAIR_EE=15e-3,
     TAU_STDP_PAIR_EI=2e-3,
 
-    ETA=0.1,
+    ETA=0.3,
     ALPHA_1=1,
     ALPHA_2=0,
     ALPHA_3=0,
@@ -309,7 +309,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
             ee_connectivity = np.where(w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)] > 0, 1, 0)
 
         if i_e in m.RANDOM_SYN_ADD_ITERS:
-            growth_prob = 0.0005
+            growth_prob = 0.00025
             new_synapses = gaussian_if_under_val(growth_prob, (m.N_EXC, m.N_EXC), 0.5 * m.W_E_E_R / M.PROJECTION_NUM, 0)
             new_synapses[~surviving_cell_mask, :] = 0
             new_synapses[:, ~surviving_cell_mask] = 0
