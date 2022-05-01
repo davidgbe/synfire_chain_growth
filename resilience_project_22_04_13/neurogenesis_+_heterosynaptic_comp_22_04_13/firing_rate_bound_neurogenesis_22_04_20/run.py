@@ -99,9 +99,11 @@ M = Generic(
     # Dropout params
     DROPOUT_MIN_IDX=0,
     DROPOUT_MAX_IDX=0, # set elsewhere
-    DROPOUT_ITER=200,
+    DROPOUT_ITER=100,
     DROPOUT_SEV=args.dropout_per[0],
-    RANDOM_SYN_ADD_ITERS=[i for i in range(201, 281)],
+    RANDOM_SYN_ADD_ITERS_EE=[i for i in range(101, 251)],
+    RANDOM_SYN_ADD_ITERS_OTHER=[i for i in range(101, 401)],
+
 
     # Synaptic plasticity params
     TAU_STDP_PAIR_EE=15e-3,
@@ -121,7 +123,7 @@ M = Generic(
 
 print(M.HETERO_COMP_MECH)
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=300e-3, EPOCHS=2000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=300e-3, EPOCHS=4000)
 np.random.seed(S.RNG_SEED)
 
 M.SUMMED_W_E_E_R_MAX = 10 * M.W_E_E_R_MAX
@@ -231,7 +233,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
     if w_r_i is None:
 
         i_e_r = gaussian_if_under_val(m.I_E_CON_PROB, (m.N_EXC, m.N_INH), m.W_I_E_R, 0)
-        i_e_r[m.N_EXC_OLD - m.PROJECTION_NUM:, :] = 0
+        i_e_r[m.N_EXC_OLD - m.PROJECTION_NUM:m.N_EXC_OLD, :] = 0
 
         w_r_i = np.block([
             [ np.zeros((m.N_EXC, m.N_EXC + m.N_UVA)), i_e_r],
@@ -293,6 +295,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
     # last_snapshot = tracemalloc.take_snapshot()
 
     surviving_cell_mask = None
+    ei_initial_summed_inputs = np.sum(w_r_copy['E'][m.N_EXC:, :m.N_EXC], axis=1)
 
     for i_e in range(epochs):
 
@@ -308,7 +311,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
             surviving_cell_mask = surviving_cell_mask.astype(bool)
             ee_connectivity = np.where(w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)] > 0, 1, 0)
 
-        if i_e in m.RANDOM_SYN_ADD_ITERS:
+        if i_e in m.RANDOM_SYN_ADD_ITERS_EE:
             growth_prob = 0.00025
             new_synapses = gaussian_if_under_val(growth_prob, (m.N_EXC, m.N_EXC), 0.5 * m.W_E_E_R / M.PROJECTION_NUM, 0)
             new_synapses[~surviving_cell_mask, :] = 0
@@ -317,12 +320,14 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
             w_r_copy['E'][:m.N_EXC, :m.N_EXC] += new_synapses
             ee_connectivity = np.where(w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)] > 0, 1, 0)
 
+        if i_e in m.RANDOM_SYN_ADD_ITERS_OTHER:
+            new_ei_synapses = gaussian_if_under_val(0.15 * growth_prob, (m.N_INH, m.N_EXC), m.W_E_I_R, 0)
+            new_ei_synapses[:, ~surviving_cell_mask] = 0
+            new_ei_synapses[np.sum(w_r_copy['E'][(m.N_EXC + m.N_UVA):, :m.N_EXC], axis=1) >= ei_initial_summed_inputs, :] = 0
+            w_r_copy['E'][(m.N_EXC + m.N_UVA):, :m.N_EXC] += new_ei_synapses
+            # w_r_copy['I'][m.N_EXC_OLD:m.N_EXC, (m.N_EXC + m.N_UVA):] += gaussian_if_under_val(10 * growth_prob, (m.N_EXC_NEW, m.N_INH), m.W_I_E_R, 0)
 
-            w_r_copy['E'][(m.N_EXC + m.N_UVA):, m.N_EXC_OLD:m.N_EXC] += gaussian_if_under_val(growth_prob, (m.N_INH, m.N_EXC_NEW), m.W_E_I_R, 0)
-
-            w_r_copy['I'][m.N_EXC_OLD:m.N_EXC, (m.N_EXC + m.N_UVA):] += gaussian_if_under_val(10 * growth_prob, (m.N_EXC_NEW, m.N_INH), m.W_I_E_R, 0)
-
-
+        if i_e in m.RANDOM_SYN_ADD_ITERS_EE or i_e in m.RANDOM_SYN_ADD_ITERS_OTHER:
             delay_map = make_delay_map(w_r_copy)
 
         t = np.arange(0, S.T, S.DT)
