@@ -28,6 +28,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--title', metavar='T', type=str, nargs=1)
 parser.add_argument('--rng_seed', metavar='r', type=int, nargs=1)
 parser.add_argument('--dropout_per', metavar='d', type=float, nargs=1)
+parser.add_argument('--replace_cells', metavar='r', type=int, nargs=1)
 
 parser.add_argument('--w_ee', metavar='ee', type=float, nargs=1)
 parser.add_argument('--w_ei', metavar='ei', type=float, nargs=1)
@@ -93,16 +94,16 @@ M = Generic(
     W_A=0,
     W_E_E_R=args.w_ee[0],
     W_E_E_R_MIN=1e-6,
-    W_E_E_R_MAX=5e-4,
+    W_E_E_R_MAX=10e-4,
     SUPER_SYNAPSE_SIZE=1.5e-3,
 
     # Dropout params
     DROPOUT_MIN_IDX=0,
     DROPOUT_MAX_IDX=0, # set elsewhere
-    DROPOUT_ITER=100,
+    DROPOUT_ITER=200,
     DROPOUT_SEV=args.dropout_per[0],
-    RANDOM_SYN_ADD_ITERS_EE=[i for i in range(101, 251)],
-    RANDOM_SYN_ADD_ITERS_OTHER=[i for i in range(101, 3001)],
+    RANDOM_SYN_ADD_ITERS_EE=[i for i in range(201, 351)],
+    RANDOM_SYN_ADD_ITERS_OTHER=[i for i in range(201, 3001)],
 
 
     # Synaptic plasticity params
@@ -129,7 +130,11 @@ np.random.seed(S.RNG_SEED)
 M.SUMMED_W_E_E_R_MAX = 10 * M.W_E_E_R_MAX
 M.W_U_E = 0.26 * 0.004
 
-M.N_EXC_NEW = int(M.N_EXC_OLD * M.DROPOUT_SEV)
+print(bool(args.replace_cells[0]))
+if bool(args.replace_cells[0]):
+    M.N_EXC_NEW = int(M.N_EXC_OLD * M.DROPOUT_SEV)
+else:
+    M.N_EXC_NEW = 0
 M.N_EXC = M.N_EXC_OLD + M.N_EXC_NEW
 
 M.CUT_IDX_TAU_PAIR_EE = int(3 * M.TAU_STDP_PAIR_EE / S.DT)
