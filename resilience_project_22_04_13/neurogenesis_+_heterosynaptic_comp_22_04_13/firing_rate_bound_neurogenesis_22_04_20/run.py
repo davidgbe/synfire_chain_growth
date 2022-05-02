@@ -723,7 +723,7 @@ def clip(f, n=1):
     f_str = f_str[:(f_str.find('.') + 1 + n)]
     return f_str
 
-title = f'{args.title[0]}_idx_{zero_pad(args.index[0], 4)}_seed_{args.rng_seed[0]}_wee_{args.w_ee[0]}_wei_{args.w_ei[0]}_wie_{args.w_ie[0]}'
+title = f'{args.title[0]}'
 quick_plot(M, run_title=title, dropout={'E': M.DROPOUT_SEV, 'I': 0})
 
 
