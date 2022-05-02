@@ -78,7 +78,7 @@ params['W_E_E'] = [str(1.8e-3)]
 params['W_E_I'] = [str(5e-5)]
 params['W_I_E'] = [str(4.5e-5)]
 params['DROP_SEV'] = [str(0.5)]
-params['REPLACE_MISSING'] = [str(0), str(1)]
+params['CONDITION'] = ['no_repl_no_syn', 'no_repl', 'all']
 params['SEED'] = [str(i) for i in range(2000, 2020)]
 
 
