@@ -100,10 +100,10 @@ M = Generic(
     # Dropout params
     DROPOUT_MIN_IDX=0,
     DROPOUT_MAX_IDX=0, # set elsewhere
-    DROPOUT_ITER=1,
+    DROPOUT_ITER=200,
     DROPOUT_SEV=args.dropout_per[0],
-    RANDOM_SYN_ADD_ITERS_EE=[i for i in range(2, 351)],
-    RANDOM_SYN_ADD_ITERS_OTHER=[i for i in range(2, 3001)],
+    RANDOM_SYN_ADD_ITERS_EE=[i for i in range(201, 351)],
+    RANDOM_SYN_ADD_ITERS_OTHER=[i for i in range(201, 3001)],
 
 
     # Synaptic plasticity params
