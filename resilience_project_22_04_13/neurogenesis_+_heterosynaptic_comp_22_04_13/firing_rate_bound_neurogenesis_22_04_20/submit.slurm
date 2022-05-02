@@ -7,8 +7,8 @@
 #SBATCH -A stf
 
 #SBATCH --nodes=1
-#SBATCH --time=5:00:00
-#SBATCH --ntasks=1
+#SBATCH --time=3:00:00
+#SBATCH --ntasks=5
 #SBATCH --mem=100G
 
 #SBATCH --chdir=.

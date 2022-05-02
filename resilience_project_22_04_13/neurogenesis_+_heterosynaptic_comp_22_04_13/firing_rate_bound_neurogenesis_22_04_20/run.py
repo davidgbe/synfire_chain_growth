@@ -102,7 +102,7 @@ M = Generic(
     DROPOUT_ITER=100,
     DROPOUT_SEV=args.dropout_per[0],
     RANDOM_SYN_ADD_ITERS_EE=[i for i in range(101, 251)],
-    RANDOM_SYN_ADD_ITERS_OTHER=[i for i in range(101, 401)],
+    RANDOM_SYN_ADD_ITERS_OTHER=[i for i in range(101, 3001)],
 
 
     # Synaptic plasticity params
@@ -321,7 +321,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
             ee_connectivity = np.where(w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)] > 0, 1, 0)
 
         if i_e in m.RANDOM_SYN_ADD_ITERS_OTHER:
-            new_ei_synapses = gaussian_if_under_val(0.15 * growth_prob, (m.N_INH, m.N_EXC), m.W_E_I_R, 0)
+            new_ei_synapses = gaussian_if_under_val(0.075 * growth_prob, (m.N_INH, m.N_EXC), m.W_E_I_R, 0)
             new_ei_synapses[:, ~surviving_cell_mask] = 0
             new_ei_synapses[np.sum(w_r_copy['E'][(m.N_EXC + m.N_UVA):, :m.N_EXC], axis=1) >= ei_initial_summed_inputs, :] = 0
             w_r_copy['E'][(m.N_EXC + m.N_UVA):, :m.N_EXC] += new_ei_synapses
