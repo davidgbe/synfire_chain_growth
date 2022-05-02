@@ -65,7 +65,7 @@ M = Generic(
     # syn rev potentials and decay times
     E_E=0, E_I=-.09, E_A=-.07, T_E=.004, T_I=.004, T_A=.006,
     
-    N_EXC_OLD=300,
+    N_EXC_OLD=600,
     N_UVA=0,
     N_INH=200,
     M=20,
@@ -123,7 +123,7 @@ M = Generic(
 
 print(M.HETERO_COMP_MECH)
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=300e-3, EPOCHS=4000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=400e-3, EPOCHS=4000)
 np.random.seed(S.RNG_SEED)
 
 M.SUMMED_W_E_E_R_MAX = 10 * M.W_E_E_R_MAX
@@ -233,7 +233,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
     if w_r_i is None:
 
         i_e_r = gaussian_if_under_val(m.I_E_CON_PROB, (m.N_EXC, m.N_INH), m.W_I_E_R, 0)
-        i_e_r[m.N_EXC_OLD - m.PROJECTION_NUM:m.N_EXC_OLD, :] = 0
+        i_e_r[m.N_EXC_OLD - m.PROJECTION_NUM:, :] = 0
 
         w_r_i = np.block([
             [ np.zeros((m.N_EXC, m.N_EXC + m.N_UVA)), i_e_r],
@@ -312,8 +312,8 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
             ee_connectivity = np.where(w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)] > 0, 1, 0)
 
         if i_e in m.RANDOM_SYN_ADD_ITERS_EE:
-            growth_prob = 0.00025
-            new_synapses = gaussian_if_under_val(growth_prob, (m.N_EXC, m.N_EXC), 0.5 * m.W_E_E_R / M.PROJECTION_NUM, 0)
+            growth_prob = 0.0005
+            new_synapses = gaussian_if_under_val(0.5 * growth_prob, (m.N_EXC, m.N_EXC), 0.5 * m.W_E_E_R / M.PROJECTION_NUM, 0)
             new_synapses[~surviving_cell_mask, :] = 0
             new_synapses[:, ~surviving_cell_mask] = 0
             new_synapses[ee_connectivity] = 0
@@ -321,11 +321,14 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
             ee_connectivity = np.where(w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)] > 0, 1, 0)
 
         if i_e in m.RANDOM_SYN_ADD_ITERS_OTHER:
-            new_ei_synapses = gaussian_if_under_val(0.075 * growth_prob, (m.N_INH, m.N_EXC), m.W_E_I_R, 0)
+            new_ei_synapses = gaussian_if_under_val(0.15 * growth_prob, (m.N_INH, m.N_EXC), m.W_E_I_R, 0)
             new_ei_synapses[:, ~surviving_cell_mask] = 0
             new_ei_synapses[np.sum(w_r_copy['E'][(m.N_EXC + m.N_UVA):, :m.N_EXC], axis=1) >= ei_initial_summed_inputs, :] = 0
             w_r_copy['E'][(m.N_EXC + m.N_UVA):, :m.N_EXC] += new_ei_synapses
-            # w_r_copy['I'][m.N_EXC_OLD:m.N_EXC, (m.N_EXC + m.N_UVA):] += gaussian_if_under_val(10 * growth_prob, (m.N_EXC_NEW, m.N_INH), m.W_I_E_R, 0)
+
+            new_ie_synapses = gaussian_if_under_val(10 * growth_prob, (m.N_EXC_NEW, m.N_INH), m.W_I_E_R, 0)
+            new_ie_synapses[w_r_copy['I'][m.N_EXC_OLD:m.N_EXC, (m.N_EXC + m.N_UVA):] > 0] = 0
+            w_r_copy['I'][m.N_EXC_OLD:m.N_EXC, (m.N_EXC + m.N_UVA):] += new_ie_synapses
 
         if i_e in m.RANDOM_SYN_ADD_ITERS_EE or i_e in m.RANDOM_SYN_ADD_ITERS_OTHER:
             delay_map = make_delay_map(w_r_copy)
@@ -466,7 +469,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
         axs[0].scatter(inh_raster[0, :] * 1000, inh_raster[1, :] - m.N_UVA, s=1, c='red', zorder=0, alpha=1)
 
         axs[0].set_ylim(-1, m.N_EXC + m.N_INH)
-        axs[0].set_xlim(m.INPUT_DELAY * 1000, 300)
+        axs[0].set_xlim(m.INPUT_DELAY * 1000, 400)
         axs[0].set_ylabel('Cell Index')
         axs[0].set_xlabel('Time (ms)')
 
