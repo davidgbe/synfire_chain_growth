@@ -100,10 +100,10 @@ M = Generic(
     # Dropout params
     DROPOUT_MIN_IDX=0,
     DROPOUT_MAX_IDX=0, # set elsewhere
-    DROPOUT_ITER=10,
+    DROPOUT_ITER=200,
     DROPOUT_SEV=args.dropout_per[0],
-    RANDOM_SYN_ADD_ITERS_EE=[i for i in range(11, 251)],
-    RANDOM_SYN_ADD_ITERS_OTHER=[i for i in range(11, 3001)],
+    RANDOM_SYN_ADD_ITERS_EE=[i for i in range(201, 451)],
+    RANDOM_SYN_ADD_ITERS_OTHER=[i for i in range(201, 3001)],
 
 
     # Synaptic plasticity params
@@ -326,18 +326,18 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 w_r_copy['E'][:m.N_EXC, :m.N_EXC] += new_synapses
                 ee_connectivity = np.where(w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)] > 0, 1, 0)
 
-            if i_e in m.RANDOM_SYN_ADD_ITERS_OTHER:
-                new_ei_synapses = gaussian_if_under_val(0.15 * growth_prob, (m.N_INH, m.N_EXC), m.W_E_I_R, 0)
-                new_ei_synapses[:, ~surviving_cell_mask] = 0
-                new_ei_synapses[np.sum(w_r_copy['E'][(m.N_EXC + m.N_UVA):, :m.N_EXC], axis=1) >= ei_initial_summed_inputs, :] = 0
-                w_r_copy['E'][(m.N_EXC + m.N_UVA):, :m.N_EXC] += new_ei_synapses
+        if i_e in m.RANDOM_SYN_ADD_ITERS_OTHER:
+            new_ei_synapses = gaussian_if_under_val(0.15 * growth_prob, (m.N_INH, m.N_EXC), m.W_E_I_R, 0)
+            new_ei_synapses[:, ~surviving_cell_mask] = 0
+            new_ei_synapses[np.sum(w_r_copy['E'][(m.N_EXC + m.N_UVA):, :m.N_EXC], axis=1) >= ei_initial_summed_inputs, :] = 0
+            w_r_copy['E'][(m.N_EXC + m.N_UVA):, :m.N_EXC] += new_ei_synapses
 
-                new_ie_synapses = gaussian_if_under_val(10 * growth_prob, (m.N_EXC_NEW, m.N_INH), m.W_I_E_R, 0)
-                new_ie_synapses[w_r_copy['I'][m.N_EXC_OLD:m.N_EXC, (m.N_EXC + m.N_UVA):] > 0] = 0
-                w_r_copy['I'][m.N_EXC_OLD:m.N_EXC, (m.N_EXC + m.N_UVA):] += new_ie_synapses
+            new_ie_synapses = gaussian_if_under_val(10 * growth_prob, (m.N_EXC_NEW, m.N_INH), m.W_I_E_R, 0)
+            new_ie_synapses[w_r_copy['I'][m.N_EXC_OLD:m.N_EXC, (m.N_EXC + m.N_UVA):] > 0] = 0
+            w_r_copy['I'][m.N_EXC_OLD:m.N_EXC, (m.N_EXC + m.N_UVA):] += new_ie_synapses
 
-            if i_e in m.RANDOM_SYN_ADD_ITERS_EE or i_e in m.RANDOM_SYN_ADD_ITERS_OTHER:
-                delay_map = make_delay_map(w_r_copy)
+        if i_e in m.RANDOM_SYN_ADD_ITERS_EE or i_e in m.RANDOM_SYN_ADD_ITERS_OTHER:
+            delay_map = make_delay_map(w_r_copy)
 
         t = np.arange(0, S.T, S.DT)
 
