@@ -82,7 +82,6 @@ params['CONDITION'] = ['all', 'no_repl_no_syn', 'no_repl']
 params['SEED'] = [str(i) for i in range(2000, 2020)]
 
 
-
 n_seeds = len(params['SEED'])
 
 for key in params.keys():
