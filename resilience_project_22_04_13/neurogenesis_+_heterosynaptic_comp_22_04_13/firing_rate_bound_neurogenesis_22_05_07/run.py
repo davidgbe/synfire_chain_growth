@@ -129,7 +129,7 @@ M = Generic(
 
 print(M.HETERO_COMP_MECH)
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=220e-3, EPOCHS=4000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=220e-3, EPOCHS=5000)
 np.random.seed(S.RNG_SEED)
 
 M.SUMMED_W_E_E_R_MAX = 10 * M.W_E_E_R_MAX
@@ -324,7 +324,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
         growth_prob = 0.0005
         if not args.cond[0].startswith('no_repl_no_syn'):
             if i_e in m.RANDOM_SYN_ADD_ITERS_EE:
-                new_synapses = exp_if_under_val(0.5 * growth_prob, (m.N_EXC, m.N_EXC), 0.1 * m.W_E_E_R / M.PROJECTION_NUM)
+                new_synapses = exp_if_under_val(0.5 * growth_prob, (m.N_EXC, m.N_EXC), 0.2 * m.W_E_E_R / M.PROJECTION_NUM)
                 new_synapses[~surviving_cell_mask, :] = 0
                 new_synapses[:, ~surviving_cell_mask] = 0
                 new_synapses[ee_connectivity] = 0
