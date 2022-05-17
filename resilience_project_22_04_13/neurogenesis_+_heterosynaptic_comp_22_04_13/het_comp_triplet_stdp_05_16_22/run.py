@@ -167,7 +167,9 @@ print('T_M_E =', 1000*M.C_M_E/M.G_L_E, 'ms')  # E cell membrane time constant (C
 
 def ff_unit_func(m, p):
     w = m.W_E_E_R / m.PROJECTION_NUM
-    return gaussian_if_under_val(p, (m.PROJECTION_NUM, m.PROJECTION_NUM), w, 0.3 * w)
+    connectivity = gaussian_if_under_val(p, (m.PROJECTION_NUM, m.PROJECTION_NUM), w, 0.3 * w)
+    connectivity[(connectivity != 0) & (connectivity < m.W_E_E_R_MIN)] = 0
+    return connectivity
 
 def generate_ff_chain(size, unit_size, unit_funcs, ff_deg=[0, 1], tempering=[1., 1.]):
     if size % unit_size != 0:
@@ -339,7 +341,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 ee_connectivity = np.where(w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)] > 0, 1, 0)
 
         if i_e in m.RANDOM_SYN_ADD_ITERS_OTHER:
-            new_ei_synapses = gaussian_if_under_val(0.3 * growth_prob, (m.N_INH, m.N_EXC), m.W_E_I_R, 0)
+            new_ei_synapses = gaussian_if_under_val(0.4 * growth_prob, (m.N_INH, m.N_EXC), m.W_E_I_R, 0)
             new_ei_synapses[:, ~surviving_cell_mask] = 0
             new_ei_synapses[np.sum(w_r_copy['E'][(m.N_EXC + m.N_UVA):, :m.N_EXC], axis=1) >= ei_initial_summed_inputs, :] = 0
             w_r_copy['E'][(m.N_EXC + m.N_UVA):, :m.N_EXC] += new_ei_synapses
@@ -462,7 +464,11 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
         cmap = cm.viridis
         cmap.set_under(color='white')
 
-        graph_weight_matrix(w_r_copy['E'][:m.N_EXC, :(m.N_EXC + m.N_UVA)], 'w_e_e_r\n', ax=axs[5], v_max=m.W_E_E_R_MAX/5, cmap=cmap)
+        min_ee_weight = w_r_copy['E'][:m.N_EXC, :(m.N_EXC + m.N_UVA)].min()
+        print(min_ee_weight)
+        print(np.sum(w_r_copy['E'][:m.N_EXC, :(m.N_EXC + m.N_UVA)][ee_connectivity] < 0))
+        graph_weight_matrix(w_r_copy['E'][:m.N_EXC, :(m.N_EXC + m.N_UVA)], 'w_e_e_r\n', ax=axs[5],
+            v_min=min_ee_weight, v_max=m.W_E_E_R_MAX/5, cmap=cmap)
         graph_weight_matrix(w_r_copy['I'][:m.N_EXC, (m.N_EXC + m.N_UVA):], 'w_i_e_r\n', ax=axs[6], v_max=m.W_E_I_R, cmap=cmap)
 
         spks_for_e_cells = rsp.spks[:, :m.N_EXC]
@@ -566,8 +572,8 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
             ## Soft summed weight bound
             if m.HETERO_COMP_MECH == 'summed_weight':
                 excess_weight = (w_r_copy['E'][:m.N_EXC, :m.N_EXC].sum(axis=1) - m.SUMMED_W_E_E_R_MAX)
-                excess_weight = excess_weight.reshape(excess_weight.shape[0], 1)
                 excess_weight = np.where(excess_weight > 0, excess_weight, 0)
+                excess_weight = excess_weight.reshape(excess_weight.shape[0], 1)
                 w_r_copy['E'][:m.N_EXC, :m.N_EXC] -= m.ETA * m.ALPHA_1 * excess_weight * ee_connectivity
 
             ## Potentiation soft bound
@@ -636,7 +642,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
 
             w_e_e_hard_bound = m.W_E_E_R_MAX
             
-            w_r_copy['E'][:m.N_EXC, :(m.N_EXC + m.N_UVA)][(w_r_copy['E'][:m.N_EXC, :(m.N_EXC + m.N_UVA)] < m.W_E_E_R_MIN) & ee_connectivity] = m.W_E_E_R_MIN
+            w_r_copy['E'][:m.N_EXC, :(m.N_EXC + m.N_UVA)][np.logical_and((w_r_copy['E'][:m.N_EXC, :(m.N_EXC + m.N_UVA)] < m.W_E_E_R_MIN), ee_connectivity)] = m.W_E_E_R_MIN
             w_r_copy['E'][:m.N_EXC, :(m.N_EXC)][w_r_copy['E'][:m.N_EXC, (m.N_EXC)] > m.W_E_E_R_MAX] = m.W_E_E_R_MAX
 
             # output weight bound
