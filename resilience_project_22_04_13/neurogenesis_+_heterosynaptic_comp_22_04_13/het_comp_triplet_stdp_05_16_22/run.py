@@ -336,7 +336,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 new_synapses = exp_if_under_val(0.5 * growth_prob, (m.N_EXC, m.N_EXC), 0.4 * m.W_E_E_R / M.PROJECTION_NUM)
                 new_synapses[~surviving_cell_mask, :] = 0
                 new_synapses[:, ~surviving_cell_mask] = 0
-                np.fill_diagonal(new_synapses, 0)
+                new_synapses[ee_connectivity] = 0
                 w_r_copy['E'][:m.N_EXC, :m.N_EXC] += new_synapses
                 ee_connectivity = np.where(w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)] > 0, 1, 0)
 
