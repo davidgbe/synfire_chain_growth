@@ -136,7 +136,7 @@ print(M.HETERO_COMP_MECH)
 S = Generic(RNG_SEED=args.rng_seed[0], DT=0.05e-3, T=220e-3, EPOCHS=5000)
 np.random.seed(S.RNG_SEED)
 
-M.SUMMED_W_E_E_R_MAX = M.W_E_E_R
+M.SUMMED_W_E_E_R_MAX = M.W_E_E_R * 0.85
 M.W_U_E = 0.26 * 0.004
 
 print(args.cond[0])
