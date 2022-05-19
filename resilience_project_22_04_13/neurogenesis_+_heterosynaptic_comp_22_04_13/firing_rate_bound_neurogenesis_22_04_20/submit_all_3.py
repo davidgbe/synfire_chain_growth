@@ -71,15 +71,16 @@ def pad_zeros(to_pad, length):
 		padded = '0' + padded
 	return padded
 
-batch_size = 10
+batch_size = 5
 
 params = OrderedDict()
 params['W_E_E'] = [str(1.8e-3)]
 params['W_E_I'] = [str(5e-5)]
 params['W_I_E'] = [str(4.5e-5)]
 params['DROP_SEV'] = [str(0.5)]
-params['CONDITION'] = ['no_repl_no_syn']
-params['SEED'] = [str(i) for i in range(2000, 2020)]
+params['CONDITION'] = ['all']  #'no_repl_no_syn', 'no_repl']
+params['SEED'] = [str(i) for i in range(2010, 2015)]
+
 
 
 n_seeds = len(params['SEED'])
