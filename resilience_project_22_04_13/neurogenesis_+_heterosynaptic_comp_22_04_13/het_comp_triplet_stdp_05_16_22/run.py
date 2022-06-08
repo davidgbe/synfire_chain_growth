@@ -71,7 +71,7 @@ M = Generic(
     # syn rev potentials and decay times
     E_E=0, E_I=-.09, E_A=-.07, T_E=.004, T_I=.004, T_A=.006,
     
-    N_EXC_OLD=200,
+    N_EXC_OLD=0,
     N_UVA=0,
     N_INH=30,
     M=20,
