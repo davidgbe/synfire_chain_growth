@@ -1,4 +1,5 @@
 from copy import deepcopy as copy
+import matplotlib
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
@@ -24,7 +25,11 @@ from ntwk import LIFNtwkG
 from utils.general import *
 from utils.file_io import *
 
+matplotlib.use('agg')
+
 cc = np.concatenate
+cmap = cm.get_cmap('viridis').copy()
+cmap.set_under(color='white')
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--title', metavar='T', type=str, nargs=1)
@@ -137,7 +142,7 @@ M = Generic(
 
 print(M.HETERO_COMP_MECH)
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.05e-3, T=200e-3, EPOCHS=5000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.05e-3, T=400e-3, EPOCHS=5000)
 np.random.seed(S.RNG_SEED)
 
 M.SUMMED_W_E_E_R_MAX = M.W_E_E_R
@@ -213,23 +218,22 @@ def gen_continuous_network(size, m):
 
     active_cell_mask = np.random.rand(size) > 0
     cont_idx_steps = np.random.rand(size)
-    cont_idx = np.array([np.sum(cont_idx_steps[:i]) for i in range(cont_idx_steps.shape[0])]) / (0.5 * size)
+    cont_idx = np.array([np.sum(cont_idx_steps[:i]) for i in range(cont_idx_steps.shape[0])]) * (6 / size)
 
     active_inactive_pairings = np.outer(active_cell_mask, active_cell_mask).astype(bool)
     cont_idx_dists = cont_idx.reshape(cont_idx.shape[0], 1) - cont_idx.reshape(1, cont_idx.shape[0])
 
     def exp_if_pos(dist, tau):
-        return np.where(np.logical_and(dist > 0, dist < 0.1), 1, 0)
-        # return np.where(np.logical_and(dist >= 0, dist < 10), np.exp(-dist/tau), 0)
+        return np.where(np.logical_and(dist >= 0, dist < 0.3), np.exp(-dist/tau), 0)
 
-    weights = np.where(active_inactive_pairings, 0.5 * w * exp_if_pos(cont_idx_dists, 0.05), gaussian_if_under_val(0.05, (size, size), 0.05 * w, 0.005 * w))
+    weights = np.where(active_inactive_pairings, 1.25 * w * exp_if_pos(cont_idx_dists, 0.15), gaussian_if_under_val(0.05, (size, size), 0.05 * w, 0.005 * w))
 
     delays = np.abs(cont_idx_dists)
     np.fill_diagonal(delays, 0)
 
     undefined_delays = np.logical_or(weights < m.W_E_E_R_MIN, ~active_inactive_pairings)
 
-    delays[undefined_delays] = np.random.lognormal(size=np.count_nonzero(undefined_delays), mean=0, sigma=0.5)
+    delays[undefined_delays] = 1/3 * np.random.rand(np.count_nonzero(undefined_delays))
 
     delays = delays / np.mean(delays[weights > m.W_E_E_R_MIN])
 
@@ -306,10 +310,34 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
 
     ee_connectivity = np.where(w_r_e[:(m.N_EXC), :(m.N_EXC + m.N_UVA)] > 0, 1, 0)
 
-    ee_delays = 3e-3 * ee_delays
+    ee_delays = 3.5e-3 * ee_delays
+
+    # create spatial structure
+    embedding = MDS(n_components=3)
+    exc_locs = embedding.fit_transform(ee_delays)
+    exc_loc_dists = compute_aggregate_dist_metric(exc_locs, exc_locs, lambda x: np.sum(np.square(x), axis=1))
+
+
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    ax.scatter(exc_locs[:, 0], exc_locs[:, 1], exc_locs[:, 2])
+    fig.savefig(os.path.join(output_dir, '3D_cell_placement.png'))
+    delay_bins, delay_freqs = bin_occurrences((3.5e-3 * exc_loc_dists / np.mean(exc_loc_dists)).flatten(), bin_size=0.01e-2)
+    plt.close(fig)
+
+
+    scale = 1
+    gs = gridspec.GridSpec(1, 1)
+    fig = plt.figure(figsize=(10 * scale, 10 * scale), tight_layout=True)
+    axs = [fig.add_subplot(gs[0])]
+    axs[0].plot(delay_bins, delay_freqs)
+    fig.savefig(os.path.join(output_dir, 'spatial_dist_distribution.png'))
+    plt.close(fig)
+
+    # create axonal delays
 
     pairwise_spk_delays = np.block([
-        [(ee_delays / S.DT).astype(int), np.ones((m.N_EXC, m.N_UVA)), int(0.5e-3 / S.DT) * np.ones((m.N_EXC, m.N_INH))],
+        [(exc_loc_dists / np.mean(exc_loc_dists) * 3.5e-3 / S.DT).astype(int), np.ones((m.N_EXC, m.N_UVA)), int(0.5e-3 / S.DT) * np.ones((m.N_EXC, m.N_INH))],
         [int(0.5e-3 / S.DT) * np.ones((m.N_INH + m.N_UVA, m.N_EXC + m.N_INH + m.N_UVA))],
     ]).astype(int)
 
@@ -324,31 +352,6 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
         return delay_map
 
     delay_map = make_delay_map(w_r)
-
-    # create spatial structure
-    embedding = MDS(n_components=3)
-    exc_locs = embedding.fit_transform(ee_delays)
-
-    print(exc_locs.shape)
-
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
-
-    ax.scatter(exc_locs[:, 0], exc_locs[:, 1], exc_locs[:, 2])
-
-    fig.savefig('sphere.png')
-
-    delay_bins, delay_freqs = bin_occurrences(ee_delays[w_e_e_r > m.W_E_E_R_MIN].flatten(), bin_size=0.05e-3)
-
-    scale = 1
-    gs = gridspec.GridSpec(1, 1)
-    fig = plt.figure(figsize=(10 * scale, 10 * scale), tight_layout=True)
-    axs = [fig.add_subplot(gs[0])]
-
-    axs[0].plot(delay_bins, delay_freqs)
-
-    fig.savefig('./spatial_dist_distribution.png')
-
 
     def create_prop(prop_exc, prop_inh):
         return cc([prop_exc * np.ones(m.N_EXC + m.N_UVA), prop_inh * np.ones(m.N_INH)])
@@ -472,27 +475,6 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
         # run smln
         rsp = ntwk.run(dt=S.DT, clamp=clamp, i_ext=i_ext, spks_u=spks_u)
 
-
-        sampled_e_cell_rasters.append(rsp.spks[int((m.INPUT_DELAY + 20e-3)/S.DT):, e_cell_sample_idxs])
-        sampled_i_cell_rasters.append(rsp.spks[int((m.INPUT_DELAY + 20e-3)/S.DT):, i_cell_sample_idxs])
-
-        sampled_trial_number = 10
-        if i_e % sampled_trial_number == 0 and i_e != 0:
-            fig = plt.figure(figsize=(8, 8), tight_layout=True)
-            ax = fig.add_subplot()
-            base_idx = 0
-            for rasters_for_cell_type in [sampled_e_cell_rasters, sampled_i_cell_rasters]:
-                for rendition_num in range(len(rasters_for_cell_type)):
-                    for cell_idx in range(rasters_for_cell_type[rendition_num].shape[1]):
-                        spk_times_for_cell = np.nonzero(rasters_for_cell_type[rendition_num][:, cell_idx])[0]
-                        ax.scatter(spk_times_for_cell * S.DT * 1000, (base_idx + cell_idx * len(rasters_for_cell_type) + rendition_num) * np.ones(len(spk_times_for_cell)), s=3, marker='|')
-                base_idx += sampled_trial_number * rasters_for_cell_type[0].shape[1]
-            ax.set_xlim(0, 150)
-            ax.set_xlabel('Time (ms)')
-            sampled_e_cell_rasters = []
-            sampled_i_cell_rasters = []
-            fig.savefig(f'{sampled_cell_output_dir}/sampled_cell_rasters_{int(i_e / sampled_trial_number)}.png')
-
         scale = 0.8
         gs = gridspec.GridSpec(14, 1)
         fig = plt.figure(figsize=(9 * scale, 30 * scale), tight_layout=True)
@@ -512,7 +494,6 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
         if surviving_cell_mask is not None:
             w_e_e_r_copy = w_e_e_r_copy[surviving_cell_mask, :]
 
-        # 0.05 * np.mean(w_e_e_r_copy.sum(axis=1)
         summed_w_bins, summed_w_counts = bin_occurrences(w_e_e_r_copy.sum(axis=1), bin_size=1e-4)
         axs[3].plot(summed_w_bins, summed_w_counts)
         axs[3].set_xlabel('Normalized summed synapatic weight')
@@ -524,12 +505,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
         axs[4].set_xlabel('Number of incoming synapses per cell')
         axs[4].set_ylabel('Counts')
 
-        cmap = cm.viridis
-        cmap.set_under(color='white')
-
         min_ee_weight = w_r_copy['E'][:m.N_EXC, :(m.N_EXC + m.N_UVA)].min()
-        print(min_ee_weight)
-        print(np.sum(w_r_copy['E'][:m.N_EXC, :(m.N_EXC + m.N_UVA)][ee_connectivity] < 0))
         graph_weight_matrix(w_r_copy['E'][:m.N_EXC, :(m.N_EXC + m.N_UVA)], 'w_e_e_r\n', ax=axs[5],
             v_min=min_ee_weight, v_max=m.W_E_E_R_MAX/5, cmap=cmap)
         graph_weight_matrix(w_r_copy['I'][:m.N_EXC, (m.N_EXC + m.N_UVA):], 'w_i_e_r\n', ax=axs[6], v_max=m.W_E_I_R, cmap=cmap)
@@ -546,7 +522,6 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
         axs[1].set_xlabel('Spks per neuron')
         axs[1].set_ylabel('Frequency')
         axs[1].set_xlim(-0.5, 30.5)
-        # axs[1].set_ylim(0, m.N_EXC + m.N_SILENT)
 
         raster = np.stack([rsp.spks_t, rsp.spks_c])
         exc_raster = raster[:, raster[1, :] < m.N_EXC]
@@ -577,9 +552,6 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
             target_secreted_levels = np.mean(target_secreted_levels, axis=1)
 
         if i_e > 0:
-            # if i_e % 80 == 0 and args.load_run is None:
-            #     e_cell_pop_fr_setpoint += m.PROJECTION_NUM * 5
-
             def burst_filter(spks, filter_size):
                 filtered = np.zeros(spks.shape, dtype=bool)
                 filter_counter = np.zeros(spks.shape[1:], dtype=int)
@@ -616,7 +588,6 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                     sparse_spks_received_e_minus = csc_matrix(filtered_spks_received_for_e_cells[i_t:stdp_end_ee, curr_spk_e, :])
 
                     stdp_burst_pair_e_e_outer_plus = sparse_spks_received_e_plus.T.multiply(trimmed_kernel_ee_plus).toarray()
-                    # print(stdp_burst_pair_e_e_outer_plus)
                     stdp_burst_pair_e_e_minus[curr_spk_e, :] += sparse_spks_received_e_minus.T.dot(trimmed_kernel_ee_minus)
 
                     for k_t in trip_spk_hist[curr_spk_e]:
@@ -634,7 +605,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
             stdp_weight_change = m.A_TRIP_PLUS * stdp_burst_pair_e_e_plus * (m.W_E_E_R_MAX * ee_connectivity - w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)])
             stdp_weight_change += m.A_PAIR_MINUS * stdp_burst_pair_e_e_minus * w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)]
 
-            graph_weight_matrix(stdp_weight_change, 'stdp weight change\n', ax=axs[7], v_min=stdp_weight_change.min(), cmap='gist_stern')
+            # graph_weight_matrix(stdp_weight_change, 'stdp weight change\n', ax=axs[7], v_min=stdp_weight_change.min(), cmap='gist_stern')
 
             # HETEROSYNAPTIC COMPETITION RULES
 
@@ -740,7 +711,6 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 temporal_widths.append(np.std(S.DT * np.nonzero(spks_for_spiking_idxs[:, k])[0]))
 
             avg_temporal_width = np.mean(temporal_widths)
-            print(avg_temporal_width)
 
             base_data_to_save = {
                 'w_e_e': m.W_E_E_R,
@@ -757,10 +727,6 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 'stable': len(~np.isnan(first_spk_times[950:1000])) > 30,
                 # 'gs': rsp.gs,
             }
-
-
-            # if e_cell_fr_setpoints is not None:
-            #     base_data_to_save['e_cell_fr_setpoints'] = e_cell_fr_setpoints
 
             if e_cell_pop_fr_setpoint is not None:
                 base_data_to_save['e_cell_pop_fr_setpoint'] = e_cell_pop_fr_setpoint
@@ -799,7 +765,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
         secs_per_cycle = secs_per_cycle[:secs_per_cycle.find('.') + 2]
         print(f'{secs_per_cycle} s')
 
-        plt.close('all')
+        plt.close(fig)
 
         # snapshot = tracemalloc.take_snapshot()
         # if last_snapshot is not None:

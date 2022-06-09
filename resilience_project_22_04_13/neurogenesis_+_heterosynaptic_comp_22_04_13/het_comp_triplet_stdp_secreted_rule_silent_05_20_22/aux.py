@@ -159,6 +159,7 @@ def sample_sphere(n, r=1):
 
 def compute_aggregate_dist_metric(target_coords, coords, metric):
     repeated_target_coords = np.stack([target_coords for l in range(coords.shape[0])], axis=2)
+    print(repeated_target_coords.T.shape)
     return np.array([metric(repeated_target_coords[i, ...].T - coords) for i in range(target_coords.shape[0])])
 
 
