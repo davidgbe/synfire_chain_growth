@@ -535,7 +535,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
             w_e_e_r_copy = w_e_e_r_copy[surviving_cell_mask, :]
 
         # 0.05 * np.mean(w_e_e_r_copy.sum(axis=1)
-        summed_w_bins, summed_w_counts = bin_occurrences(w_e_e_r_copy.sum(axis=1), bin_size=1e-4)
+        summed_w_bins, summed_w_counts = bin_occurrences(w_e_e_r_copy.sum(axis=1), bin_size=1e-4, max_val=0.004)
         axs[3].plot(summed_w_bins, summed_w_counts)
         axs[3].set_xlabel('Normalized summed synapatic weight')
         axs[3].set_ylabel('Counts')
