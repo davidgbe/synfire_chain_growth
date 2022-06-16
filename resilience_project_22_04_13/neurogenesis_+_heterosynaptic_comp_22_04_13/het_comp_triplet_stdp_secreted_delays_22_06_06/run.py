@@ -137,7 +137,7 @@ M = Generic(
     HETERO_COMP_MECH=args.hetero_comp_mech[0],
     STDP_TYPE=args.stdp_type[0],
 
-    SETPOINT_MEASUREMENT_PERIOD=(1000, 1030),
+    SETPOINT_MEASUREMENT_PERIOD=(200, 230),
 )
 
 print(M.HETERO_COMP_MECH)
@@ -224,9 +224,9 @@ def gen_continuous_network(size, m):
     cont_idx_dists = cont_idx.reshape(cont_idx.shape[0], 1) - cont_idx.reshape(1, cont_idx.shape[0])
 
     def exp_if_pos(dist, tau):
-        return np.where(np.logical_and(dist >= 0, dist < 0.3), np.exp(-dist/tau), 0)
+        return np.where(np.logical_and(dist >= 0, dist < 0.3), 1., 0) # np.exp(-dist/tau), 0)
 
-    weights = np.where(active_inactive_pairings, 1.25 * w * exp_if_pos(cont_idx_dists, 0.15), gaussian_if_under_val(0.05, (size, size), 0.05 * w, 0.005 * w))
+    weights = np.where(active_inactive_pairings, 0.75 * w * exp_if_pos(cont_idx_dists, 0.15), gaussian_if_under_val(0.05, (size, size), 0.05 * w, 0.005 * w))
 
     delays = np.abs(cont_idx_dists)
     np.fill_diagonal(delays, 0)
@@ -313,7 +313,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
     ee_delays = 3.5e-3 * ee_delays
 
     # create spatial structure
-    embedding = MDS(n_components=3)
+    embedding = MDS(n_components=3, max_iter=10000)
     exc_locs = embedding.fit_transform(ee_delays)
     exc_loc_dists = compute_aggregate_dist_metric(exc_locs, exc_locs, lambda x: np.sum(np.square(x), axis=1))
 
@@ -340,6 +340,14 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
         [(exc_loc_dists / np.mean(exc_loc_dists) * 3.5e-3 / S.DT).astype(int), np.ones((m.N_EXC, m.N_UVA)), int(0.5e-3 / S.DT) * np.ones((m.N_EXC, m.N_INH))],
         [int(0.5e-3 / S.DT) * np.ones((m.N_INH + m.N_UVA, m.N_EXC + m.N_INH + m.N_UVA))],
     ]).astype(int)
+
+    scale = 1
+    gs = gridspec.GridSpec(1, 1)
+    fig = plt.figure(figsize=(10 * scale, 10 * scale), tight_layout=True)
+    axs = [fig.add_subplot(gs[0])]
+    axs[0].imshow(exc_loc_dists / np.mean(exc_loc_dists) * 3.5e-3)
+    fig.savefig(os.path.join(output_dir, 'delay_structure.png'))
+    plt.close(fig)
 
     # turn pairwise delays into list of cells one cell is synapsed to with some delay tau
    
