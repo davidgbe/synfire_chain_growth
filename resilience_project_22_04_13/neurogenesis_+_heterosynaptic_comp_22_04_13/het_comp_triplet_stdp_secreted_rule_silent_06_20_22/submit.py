@@ -2,9 +2,10 @@ import os
 from collections import OrderedDict
 import functools
 
+
 base_path = os.curdir
 scripts = [
-	'submit.slurm',
+	'submit_klone.slurm',
 ]
 
 def replace_all(line, repl_dict):
@@ -74,6 +75,7 @@ def pad_zeros(to_pad, length):
 batch_size = 4
 
 params = OrderedDict()
+params['SEED'] = [str(i) for i in range(2000, 2012)]
 params['W_E_E'] = [str(1.2e-3)]
 params['W_E_I'] = [str(7e-5)]
 params['W_I_E'] = [str(6e-5)]
@@ -81,7 +83,6 @@ params['DROP_SEV'] = [str(0.5)]
 params['COMP_MECH'] = ['secreted_regulation']
 params['CONDITION'] = ['no_repl', 'no_repl_no_syn']
 params['PER_SILENT'] = [str(0.5)]
-params['SEED'] = [str(i) for i in range(2000, 2012)]
 
 n_seeds = len(params['SEED'])
 
