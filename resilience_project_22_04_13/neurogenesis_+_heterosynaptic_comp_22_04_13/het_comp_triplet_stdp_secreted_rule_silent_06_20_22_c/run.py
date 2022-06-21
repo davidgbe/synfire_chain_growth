@@ -141,7 +141,7 @@ M = Generic(
 
 print(M.HETERO_COMP_MECH)
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.05e-3, T=180e-3, EPOCHS=5000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.05e-3, T=180e-3, EPOCHS=3000)
 np.random.seed(S.RNG_SEED)
 
 M.SUMMED_W_E_E_R_MAX = M.W_E_E_R

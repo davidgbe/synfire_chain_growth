@@ -81,7 +81,7 @@ params['W_E_I'] = [str(7e-5)]
 params['W_I_E'] = [str(6e-5)]
 params['DROP_SEV'] = [str(0.25), str(0.5)]
 params['COMP_MECH'] = ['secreted_regulation']
-params['CONDITION'] = ['no_repl', 'no_repl_no_syn', 'all']
+params['CONDITION'] = ['no_repl', 'all']
 params['PER_SILENT'] = [str(0)]
 
 n_seeds = len(params['SEED'])
