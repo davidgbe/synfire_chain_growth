@@ -7,7 +7,7 @@
 #SBATCH -A labfairhall
 
 #SBATCH --nodes=1
-#SBATCH --time=7:00:00
+#SBATCH --time=8:00:00
 #SBATCH --ntasks=10
 #SBATCH --mem=100G
 
