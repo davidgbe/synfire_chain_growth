@@ -141,7 +141,7 @@ M = Generic(
 
 print(M.HETERO_COMP_MECH)
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.05e-3, T=200e-3, EPOCHS=5000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.05e-3, T=160e-3, EPOCHS=5000)
 np.random.seed(S.RNG_SEED)
 
 M.SUMMED_W_E_E_R_MAX = M.W_E_E_R
@@ -234,11 +234,21 @@ def gen_continuous_network(size, m):
     def exp_if_pos(dist, tau):
         return np.where(np.logical_and(dist >= 0, dist < 0.4), 1., 0) # np.exp(-dist/tau), 0)
 
-    weights = np.where(active_inactive_pairings, (1 + 0.4 * args.silent_fraction[0]) * w * exp_if_pos(cont_idx_dists, 0.15), exp_if_under_val(0.05, (size, size), 0.1 * w))
-    delays = np.abs(cont_idx_dists)
-    np.fill_diagonal(delays, 0)
+    sequence_weights = np.where(active_inactive_pairings, (1 + 0.4 * args.silent_fraction[0]) * w * exp_if_pos(cont_idx_dists, 0.15), exp_if_under_val(0.05, (size, size), 0.1 * w))
+    sequence_delays = np.abs(cont_idx_dists)
+    np.fill_diagonal(sequence_delays, 0)
 
-    undefined_delays = np.logical_or(weights < m.W_E_E_R_MIN, ~active_inactive_pairings)
+    weights = np.zeros((m.N_EXC, m.N_EXC))
+    weights[:size, :size] = sequence_weights
+
+    delays = np.zeros((m.N_EXC, m.N_EXC))
+    delays[:size, :size] = sequence_delays
+
+    all_active_inactive_pairings = np.zeros((m.N_EXC, m.N_EXC)).astype(bool)
+    all_active_inactive_pairings[:size, :size] = active_inactive_pairings
+
+
+    undefined_delays = np.logical_or(weights < m.W_E_E_R_MIN, ~all_active_inactive_pairings)
 
     delays[undefined_delays] = 1/3 * np.random.rand(np.count_nonzero(undefined_delays))
 
@@ -288,12 +298,9 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
         for l_idx in range(con_reach):
             unit_funcs.append(partial(ff_unit_func, m=m, p=1.)) # np.max(0.7 - l_idx * 0.15, 0)))
 
-        w_e_e_r_chain, ee_delays = gen_continuous_network(m.N_EXC_OLD, m)
+        w_e_e_r, ee_delays = gen_continuous_network(m.N_EXC_OLD, m)
         ee_delays = 3e-3 * ee_delays
-        np.fill_diagonal(w_e_e_r_chain, 0.)
-
-        w_e_e_r = np.zeros((m.N_EXC, m.N_EXC))
-        w_e_e_r[:m.N_EXC_OLD, :m.N_EXC_OLD] = w_e_e_r_chain
+        np.fill_diagonal(w_e_e_r, 0.)
 
         e_i_r = gaussian_if_under_val(m.E_I_CON_PROB, (m.N_INH, m.N_EXC), m.W_E_I_R, 0)
         e_i_r[:, m.N_EXC_OLD:] = 0
@@ -576,23 +583,10 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
 
         if i_e == m.SETPOINT_MEASUREMENT_PERIOD[1]:
             target_secreted_levels = np.mean(target_secreted_levels, axis=1)
+            if not args.cond[0].startswith('no_repl'):
+                target_secreted_levels[M.N_EXC_OLD:M.N_EXC] = np.mean(target_secreted_levels[:M.N_EXC_OLD])
 
         if i_e > 0:
-            # if i_e % 80 == 0 and args.load_run is None:
-            #     e_cell_pop_fr_setpoint += m.PROJECTION_NUM * 5
-
-            def burst_filter(spks, filter_size):
-                filtered = np.zeros(spks.shape, dtype=bool)
-                filter_counter = np.zeros(spks.shape[1:], dtype=int)
-                for i_t in range(spks.shape[0]):
-                    filtered[i_t, np.bitwise_and(spks[i_t, ...], filter_counter == 0)] = 1
-                    filter_counter[filtered[i_t, ...]] = filter_size + 1
-                    filter_counter -= 1
-                    filter_counter[filter_counter < 0] = 0
-                return filtered
-
-            t_steps_in_burst = int(20e-3/S.DT)
-
             filtered_spks_for_e_cells = spks_for_e_cells
             filtered_spks_received_for_e_cells = spks_received_for_e_cells
             # shape of filtered spks received is (timesteps, receiving cells, emitting cells)
@@ -617,7 +611,6 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                     sparse_spks_received_e_minus = csc_matrix(filtered_spks_received_for_e_cells[i_t:stdp_end_ee, curr_spk_e, :])
 
                     stdp_burst_pair_e_e_outer_plus = sparse_spks_received_e_plus.T.multiply(trimmed_kernel_ee_plus).toarray()
-                    # print(stdp_burst_pair_e_e_outer_plus)
                     stdp_burst_pair_e_e_minus[curr_spk_e, :] += sparse_spks_received_e_minus.T.dot(trimmed_kernel_ee_minus)
 
                     for k_t in trip_spk_hist[curr_spk_e]:
