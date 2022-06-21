@@ -494,27 +494,6 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
         # run smln
         rsp = ntwk.run(dt=S.DT, clamp=clamp, i_ext=i_ext, spks_u=spks_u)
 
-
-        sampled_e_cell_rasters.append(rsp.spks[int((m.INPUT_DELAY + 20e-3)/S.DT):, e_cell_sample_idxs])
-        sampled_i_cell_rasters.append(rsp.spks[int((m.INPUT_DELAY + 20e-3)/S.DT):, i_cell_sample_idxs])
-
-        sampled_trial_number = 10
-        if i_e % sampled_trial_number == 0 and i_e != 0:
-            fig = plt.figure(figsize=(8, 8), tight_layout=True)
-            ax = fig.add_subplot()
-            base_idx = 0
-            for rasters_for_cell_type in [sampled_e_cell_rasters, sampled_i_cell_rasters]:
-                for rendition_num in range(len(rasters_for_cell_type)):
-                    for cell_idx in range(rasters_for_cell_type[rendition_num].shape[1]):
-                        spk_times_for_cell = np.nonzero(rasters_for_cell_type[rendition_num][:, cell_idx])[0]
-                        ax.scatter(spk_times_for_cell * S.DT * 1000, (base_idx + cell_idx * len(rasters_for_cell_type) + rendition_num) * np.ones(len(spk_times_for_cell)), s=3, marker='|')
-                base_idx += sampled_trial_number * rasters_for_cell_type[0].shape[1]
-            ax.set_xlim(0, 150)
-            ax.set_xlabel('Time (ms)')
-            sampled_e_cell_rasters = []
-            sampled_i_cell_rasters = []
-            fig.savefig(f'{sampled_cell_output_dir}/sampled_cell_rasters_{int(i_e / sampled_trial_number)}.png')
-
         scale = 0.8
         gs = gridspec.GridSpec(14, 1)
         fig = plt.figure(figsize=(9 * scale, 30 * scale), tight_layout=True)
@@ -810,8 +789,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 base_data_to_save.update(update_obj)
 
             sio.savemat(robustness_output_dir + '/' + f'title_{title}_idx_{zero_pad(i_e, 4)}', base_data_to_save)
-
-        fig.savefig(f'{output_dir}/{zero_pad(i_e, 4)}.png')
+            fig.savefig(f'{output_dir}/{zero_pad(i_e, 4)}.png')
 
         end = time.time()
         secs_per_cycle = f'{end - start}'
