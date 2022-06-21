@@ -124,7 +124,7 @@ M = Generic(
     A_TRIP_PLUS=6.5,
     A_PAIR_MINUS=-7.1,
 
-    ETA=0.05,
+    ETA=0.025,
     ALPHA_1=1,
     ALPHA_2=0,
     ALPHA_3=0,
@@ -234,7 +234,7 @@ def gen_continuous_network(size, m):
     def exp_if_pos(dist, tau):
         return np.where(np.logical_and(dist >= 0, dist < 0.4), 1., 0) # np.exp(-dist/tau), 0)
 
-    sequence_weights = np.where(active_inactive_pairings, (1 + 0.4 * args.silent_fraction[0]) * w * exp_if_pos(cont_idx_dists, 0.15), exp_if_under_val(0.05, (size, size), 0.1 * w))
+    sequence_weights = np.where(active_inactive_pairings, (0.5 + 0.4 * args.silent_fraction[0]) * w * exp_if_pos(cont_idx_dists, 0.15), exp_if_under_val(0.05, (size, size), 0.1 * w))
     sequence_delays = np.abs(cont_idx_dists)
     np.fill_diagonal(sequence_delays, 0)
 
@@ -699,10 +699,8 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
 
                 # added single cell regulation
                 e_diffs = e_cell_fr_setpoints - np.sum(spks_for_e_cells > 0, axis=0)
-
                 e_diffs[e_diffs > 0] = 0
-
-                e_diffs = np.power(e_diffs, 3)
+                e_diffs = -1 * np.power(e_diffs, 2)
 
                 fr_update_e = e_diffs.reshape(e_diffs.shape[0], 1) * np.ones((m.N_EXC, m.N_EXC + m.N_UVA)).astype(float)
                 firing_rate_potentiation = m.ETA * m.ALPHA_4 * fr_update_e
@@ -779,7 +777,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 base_data_to_save.update(update_obj)
 
             sio.savemat(robustness_output_dir + '/' + f'title_{title}_idx_{zero_pad(i_e, 4)}', base_data_to_save)
-            fig.savefig(f'{output_dir}/{zero_pad(i_e, 4)}.png')
+        fig.savefig(f'{output_dir}/{zero_pad(i_e, 4)}.png')
 
         end = time.time()
         secs_per_cycle = f'{end - start}'
