@@ -82,7 +82,6 @@ params['W_E_I'] = [str(7e-5)]
 params['W_I_E'] = [str(6e-5)]
 params['W_U'] = [str(0), str(5e-6), str(1e-5), str(1e-4)]
 params['DROP_SEV'] = [str(0.25), str(0.5)]
-params['SCRIPT_NAME'] = ['run.py']
 
 n_seeds = len(params['SEED'])
 
@@ -105,7 +104,7 @@ for src_name in scripts:
 		dst = open(dst_name, 'wt')
 
 		for line in src:
-			if line.find('python run.py') >= 0:
+			if line.find('python') >= 0:
 				for batch_idx in range(batch_size):
 					script_num = n + batch_idx
 					if script_num >= n_scripts:
