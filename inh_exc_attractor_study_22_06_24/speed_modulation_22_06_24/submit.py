@@ -78,8 +78,8 @@ params = OrderedDict()
 params['SEED'] = [str(i) for i in range(2000, 2010)]
 params['W_E_E_F'] = [str(6e-5)]
 params['BETA'] = [str(5)]
-params['W_E_I'] = [str(7e-5)]
-params['W_I_E'] = [str(6e-5)]
+params['W_E_I'] = [str(7e-4)]
+params['W_I_E'] = [str(6e-4)]
 params['W_U'] = [str(0), str(5e-6), str(1e-5), str(1e-4)]
 params['DROP_SEV'] = [str(0.25), str(0.5)]
 
