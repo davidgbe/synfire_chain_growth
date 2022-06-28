@@ -341,7 +341,6 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
 
         if i_e == m.DROPOUT_ITER:
             w_r_copy['E'][:(m.N_EXC + m.N_UVA + m.N_INH), :m.N_EXC], surviving_cell_mask = dropout_on_mat(w_r_copy['E'][:(m.N_EXC + m.N_UVA + m.N_INH), :m.N_EXC], dropout['E'])
-            surviving_cell_mask = np.concatenate([surviving_cell_mask, np.ones(m.N_EXC)])
             surviving_cell_mask = surviving_cell_mask.astype(bool)
             ee_connectivity = np.where(w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)] > 0, 1, 0)
 
