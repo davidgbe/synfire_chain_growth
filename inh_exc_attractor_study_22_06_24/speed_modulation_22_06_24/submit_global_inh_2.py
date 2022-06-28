@@ -76,9 +76,9 @@ batch_size = 60
 
 params = OrderedDict()
 params['SEED'] = [str(i) for i in range(2000, 2010)]
-params['W_E_E_F'] = [str(1.5e-4)]
-params['BETA'] = [str(1.5), str(2)]
-params['W_E_I'] = [str(7e-4)]
+params['W_E_E_F'] = [str(5e-4)]
+params['BETA'] = [str(0), str(0.3)]
+params['W_E_I'] = [str(1e-3)]
 params['W_I_E'] = [str(4e-5)]
 params['W_U'] = [str(0), str(5e-6), str(1e-5), str(1e-4)]
 params['DROP_SEV'] = [str(0.1), str(0.25), str(0.5)]
