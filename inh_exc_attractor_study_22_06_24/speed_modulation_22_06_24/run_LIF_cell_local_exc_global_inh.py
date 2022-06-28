@@ -115,7 +115,7 @@ M = Generic(
     DROPOUT_SEV=args.dropout_per[0],
 )
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.05e-3, T=500e-3, EPOCHS=20)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.05e-3, T=500e-3, EPOCHS=10)
 np.random.seed(S.RNG_SEED)
 
 M.SUMMED_W_E_E_R_MAX = M.W_E_E_F
@@ -464,7 +464,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
 
         first_spk_times = process_single_activation(exc_raster, m)
 
-        if i_e % 10 == 0:
+        if i_e % 1 == 0:
 
             mean_initial_first_spk_time = np.nanmean(first_spk_times[50:60])
             mean_final_first_spk_time = np.nanmean(first_spk_times[160:170])
