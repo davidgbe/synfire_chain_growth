@@ -49,6 +49,8 @@ parser.add_argument('--stdp_type', metavar='S', type=str, nargs=1)
 
 parser.add_argument('--load_run', metavar='L', type=str, nargs=2)
 
+parser.add_argument('--syn_fail_prob', metavar='SF', type=float, nargs=1)
+
 
 args = parser.parse_args()
 
@@ -138,7 +140,7 @@ M = Generic(
 
     SETPOINT_MEASUREMENT_PERIOD=(960, 990),
 
-    SYN_FAIL_PROB=0.1,
+    SYN_FAIL_PROB=args.syn_fail_prob[0],
 )
 
 print(M.HETERO_COMP_MECH)
