@@ -3,7 +3,7 @@
 ## Presets
 #SBATCH --job-name=syn_param
 
-#SBATCH -p compute
+#SBATCH -p stf
 #SBATCH -A stf
 
 #SBATCH --nodes=1
