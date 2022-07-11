@@ -4,7 +4,7 @@
 #SBATCH --job-name=syn_param
 
 #SBATCH -p compute
-#SBATCH -A labfairhall
+#SBATCH -A stf
 
 #SBATCH --nodes=1
 #SBATCH --time=8:00:00

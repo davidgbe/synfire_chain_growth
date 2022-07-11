@@ -75,7 +75,7 @@ def pad_zeros(to_pad, length):
 batch_size = 6
 
 params = OrderedDict()
-params['SEED'] = [str(i) for i in range(2000, 2010)]
+params['SEED'] = [str(i) for i in range(2000, 2020)]
 params['W_E_E'] = [str(1.2e-3)]
 params['W_E_I'] = [str(7e-5)]
 params['W_I_E'] = [str(6e-5)]

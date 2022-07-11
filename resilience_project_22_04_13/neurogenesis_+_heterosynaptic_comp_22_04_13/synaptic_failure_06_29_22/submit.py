@@ -81,8 +81,8 @@ params['W_E_I'] = [str(7e-5)]
 params['W_I_E'] = [str(6e-5)]
 params['DROP_SEV'] = [str(0.25), str(0.5)]
 params['COMP_MECH'] = ['secreted_regulation']
-params['CONDITION'] = ['all']
-params['PER_SILENT'] = [str(0)]
+params['CONDITION'] = ['np_repl_no_syn']
+params['PER_SILENT'] = [str(0.5)]
 params['SYNAPTIC_FAILURE_RATE'] = [str(0.1), str(0.2), str(0.3)]
 
 n_seeds = len(params['SEED'])
