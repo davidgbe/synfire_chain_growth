@@ -75,14 +75,16 @@ def pad_zeros(to_pad, length):
 batch_size = 6
 
 params = OrderedDict()
-params['SEED'] = [str(i) for i in range(2000, 2010)]
+params['SEED'] = [str(i) for i in range(2000, 2020)]
 params['W_E_E'] = [str(1.2e-3)]
-params['W_E_I'] = [str(7e-5)]
-params['W_I_E'] = [str(5e-5)]
+params['W_E_I'] = [str(14e-5)]
+params['W_I_E'] = [str(2.5e-5)]
 params['DROP_SEV'] = [str(0.1), str(0.25), str(0.5)]
 params['COMP_MECH'] = ['secreted_regulation']
 params['CONDITION'] = ['no_repl_no_syn']
-params['PER_SILENT'] = [str(0), str(0.5)]
+params['PER_SILENT'] = [str(0.5)]
+params['A5'] = [str(0.1)]
+
 
 n_seeds = len(params['SEED'])
 
