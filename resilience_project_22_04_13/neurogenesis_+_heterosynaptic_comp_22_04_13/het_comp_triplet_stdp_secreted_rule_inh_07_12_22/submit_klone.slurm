@@ -3,11 +3,11 @@
 ## Presets
 #SBATCH --job-name=syn_param
 
-#SBATCH -p compute-bigmem
-#SBATCH -A labfairhall
+#SBATCH -p compute-hugemem
+#SBATCH -A stf
 
 #SBATCH --nodes=1
-#SBATCH --time=8:00:00
+#SBATCH --time=10:00:00
 #SBATCH --ntasks=10
 #SBATCH --mem=100G
 
