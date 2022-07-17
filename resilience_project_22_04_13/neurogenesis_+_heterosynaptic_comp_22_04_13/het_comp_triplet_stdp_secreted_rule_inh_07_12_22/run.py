@@ -725,7 +725,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                     def sigmoid_tranform(x):
                         return (np.exp(x) - 1) / (np.exp(x) + 1)
 
-                    sigmoid_transform_e_diffs = sigmoid_tranform(secreted_diffs)
+                    sigmoid_transform_e_diffs = sigmoid_tranform(secreted_diffs / 100)
 
                     w_update = sigmoid_transform_e_diffs.reshape(sigmoid_transform_e_diffs.shape[0], 1) * np.ones((m.N_EXC, m.N_EXC + m.N_UVA)).astype(float)
                     w_r_copy['E'][:m.N_EXC, :(m.N_EXC + m.N_UVA)] += (m.ETA * m.ALPHA_5 * w_update * w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)])
