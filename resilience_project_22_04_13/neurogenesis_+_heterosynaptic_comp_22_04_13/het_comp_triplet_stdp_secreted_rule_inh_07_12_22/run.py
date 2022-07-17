@@ -144,7 +144,7 @@ M = Generic(
 
 print(M.HETERO_COMP_MECH)
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.05e-3, T=180e-3, EPOCHS=3000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.05e-3, T=180e-3, EPOCHS=5000)
 np.random.seed(S.RNG_SEED)
 
 M.SUMMED_W_E_E_R_MAX = M.W_E_E_R
@@ -725,7 +725,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                     def sigmoid_tranform(x):
                         return (np.exp(x) - 1) / (np.exp(x) + 1)
 
-                    sigmoid_transform_e_diffs = sigmoid_tranform(secreted_diffs / 100)
+                    sigmoid_transform_e_diffs = sigmoid_tranform(secreted_diffs / 10)
 
                     w_update = sigmoid_transform_e_diffs.reshape(sigmoid_transform_e_diffs.shape[0], 1) * np.ones((m.N_EXC, m.N_EXC + m.N_UVA)).astype(float)
                     w_r_copy['E'][:m.N_EXC, :(m.N_EXC + m.N_UVA)] += (m.ETA * m.ALPHA_5 * w_update * w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)])
