@@ -237,7 +237,7 @@ def gen_continuous_network(size, m):
     def exp_if_pos(dist, tau):
         return np.where(np.logical_and(dist >= 0, dist < 0.4), 1., 0) # np.exp(-dist/tau), 0)
 
-    sequence_weights = np.where(active_inactive_pairings, (0.5 + 0.4 * args.silent_fraction[0]) * w * exp_if_pos(cont_idx_dists, 0.15), exp_if_under_val(0.075, (size, size), 0.1 * w))
+    sequence_weights = np.where(active_inactive_pairings, (0.5 + 0.4 * args.silent_fraction[0]) * w * exp_if_pos(cont_idx_dists, 0.15), exp_if_under_val(0.075, (size, size), 0.2 * w))
     sequence_delays = np.abs(cont_idx_dists)
     np.fill_diagonal(sequence_delays, 0)
 
@@ -725,7 +725,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                     def sigmoid_tranform(x):
                         return (np.exp(x) - 1) / (np.exp(x) + 1)
 
-                    sigmoid_transform_e_diffs = sigmoid_tranform(secreted_diffs / 10)
+                    sigmoid_transform_e_diffs = sigmoid_tranform(secreted_diffs / 100)
 
                     w_update = sigmoid_transform_e_diffs.reshape(sigmoid_transform_e_diffs.shape[0], 1) * np.ones((m.N_EXC, m.N_EXC + m.N_UVA)).astype(float)
                     w_r_copy['E'][:m.N_EXC, :(m.N_EXC + m.N_UVA)] += (m.ETA * m.ALPHA_5 * w_update * w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)])
@@ -815,7 +815,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 base_data_to_save.update(update_obj)
 
             sio.savemat(robustness_output_dir + '/' + f'title_{title}_idx_{zero_pad(i_e, 4)}', base_data_to_save)
-            fig.savefig(f'{output_dir}/{zero_pad(i_e, 4)}.png')
+        fig.savefig(f'{output_dir}/{zero_pad(i_e, 4)}.png')
 
         end = time.time()
         secs_per_cycle = f'{end - start}'
