@@ -192,7 +192,7 @@ def compute_secreted_levels(spks_for_e_cells, exc_locs, m, surviving_cell_mask=N
     if surviving_cell_mask is not None:
         curr_firing_rates[surviving_cell_mask] = 0
 
-    activity_metric = partial(gaussian_metric, w=curr_firing_rates, v=0.1)
+    activity_metric = partial(gaussian_metric, w=curr_firing_rates, v=0.3)
 
     target_locs = exc_locs if target_locs is None else target_locs
     return compute_aggregate_dist_metric(target_locs, exc_locs, activity_metric)
