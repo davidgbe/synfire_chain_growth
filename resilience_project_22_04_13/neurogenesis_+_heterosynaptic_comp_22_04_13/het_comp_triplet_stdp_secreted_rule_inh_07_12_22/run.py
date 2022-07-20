@@ -89,7 +89,7 @@ M = Generic(
     PROJECTION_NUM=10,
     INPUT_STD=1e-3,
     BURST_T=1.5e-3,
-    INPUT_DELAY=50e-3,
+    INPUT_DELAY=10e-3,
     
     # OTHER INPUTS
     SGM_N=10e-11,  # noise level (A*sqrt(s))
@@ -127,11 +127,11 @@ M = Generic(
     A_TRIP_PLUS=6.5,
     A_PAIR_MINUS=-7.1,
 
-    ETA=0.015,
+    ETA=0.025,
     ALPHA_1=1,
     ALPHA_2=0,
     ALPHA_3=0,
-    ALPHA_4=0.3,
+    ALPHA_4=0.6,
     ALPHA_5=args.alpha_5[0],
     BETA_1=1,
     BETA_2=1e-5, #1e-5
@@ -139,12 +139,12 @@ M = Generic(
     HETERO_COMP_MECH=args.hetero_comp_mech[0],
     STDP_TYPE=args.stdp_type[0],
 
-    SETPOINT_MEASUREMENT_PERIOD=(950, 980),
+    SETPOINT_MEASUREMENT_PERIOD=(50, 80),
 )
 
 print(M.HETERO_COMP_MECH)
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.05e-3, T=180e-3, EPOCHS=5000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=100e-3, EPOCHS=5000)
 np.random.seed(S.RNG_SEED)
 
 M.SUMMED_W_E_E_R_MAX = M.W_E_E_R
@@ -237,7 +237,9 @@ def gen_continuous_network(size, m):
     def exp_if_pos(dist, tau):
         return np.where(np.logical_and(dist >= 0, dist < 0.4), 1., 0) # np.exp(-dist/tau), 0)
 
-    sequence_weights = np.where(active_inactive_pairings, (0.5 + 0.4 * args.silent_fraction[0]) * w * exp_if_pos(cont_idx_dists, 0.15), exp_if_under_val(0.075, (size, size), 0.2 * w))
+    inactive_weights = np.concatenate([exp_if_under_val(0.075, (1, size), 0.5 * r * w) for r in np.random.rand(size)], axis=0)
+
+    sequence_weights = np.where(active_inactive_pairings, (0.5 + 0.4 * args.silent_fraction[0]) * w * exp_if_pos(cont_idx_dists, 0.15), inactive_weights)
     sequence_delays = np.abs(cont_idx_dists)
     np.fill_diagonal(sequence_delays, 0)
 
