@@ -139,7 +139,7 @@ M = Generic(
     HETERO_COMP_MECH=args.hetero_comp_mech[0],
     STDP_TYPE=args.stdp_type[0],
 
-    SETPOINT_MEASUREMENT_PERIOD=(50, 80),
+    SETPOINT_MEASUREMENT_PERIOD=(850, 880),
 )
 
 print(M.HETERO_COMP_MECH)
