@@ -3,7 +3,7 @@
 ## Presets
 #SBATCH --job-name=syn_param
 
-#SBATCH -p compute-hugemem
+#SBATCH -p compute
 #SBATCH -A stf
 
 #SBATCH --nodes=1
