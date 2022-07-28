@@ -97,7 +97,7 @@ M = Generic(
 
     # Connection probabilities
     CON_PROB_R=0.,
-    E_I_CON_PROB=0.05,
+    E_I_CON_PROB=0.075,
     I_E_CON_PROB=1.,
 
     # Weights
@@ -144,7 +144,7 @@ M = Generic(
 
 print(M.HETERO_COMP_MECH)
 
-S = Generic(RNG_SEED=args.rng_seed[0], DT=0.2e-3, T=100e-3, EPOCHS=5000)
+S = Generic(RNG_SEED=args.rng_seed[0], DT=0.1e-3, T=100e-3, EPOCHS=5000)
 np.random.seed(S.RNG_SEED)
 
 M.SUMMED_W_E_E_R_MAX = M.W_E_E_R
@@ -239,7 +239,7 @@ def gen_continuous_network(size, m):
 
     inactive_weights = np.concatenate([exp_if_under_val(0.075, (1, size), 0.5 * r * w) for r in np.random.rand(size)], axis=0)
 
-    sequence_weights = np.where(active_inactive_pairings, (0.5 + 0.4 * args.silent_fraction[0]) * w * exp_if_pos(cont_idx_dists, 0.15), inactive_weights)
+    sequence_weights = np.where(active_inactive_pairings, (0.7 + 0.3 * args.silent_fraction[0]) * w * exp_if_pos(cont_idx_dists, 0.15), inactive_weights)
     sequence_delays = np.abs(cont_idx_dists)
     np.fill_diagonal(sequence_delays, 0)
 
@@ -416,6 +416,8 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
     ei_initial_summed_inputs = np.sum(w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC], axis=1)
 
     initial_first_spike_times = None
+
+    batched_data_to_save = []
 
     for i_e in range(epochs):
 
@@ -656,9 +658,8 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 w_r_copy['E'][:m.N_EXC, :m.N_EXC] += (m.ETA * m.BETA_2 * m.A_PAIR_MINUS * stdp_burst_pair_e_e_minus * w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)])
                 w_r_copy['E'][:m.N_EXC, :m.N_EXC] += (m.ETA * m.BETA_2 * m.A_TRIP_PLUS * stdp_burst_pair_e_e_plus * (m.W_E_E_R_MAX * ee_connectivity - w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)]))
 
-                print(stdp_burst_pair_e_i_plus.sum())
-                w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] += (500 * m.ETA * m.BETA_2 * m.A_PAIR_MINUS * stdp_burst_pair_e_i_minus * w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC])
-                w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] += (500 * m.ETA * m.BETA_2 * m.A_TRIP_PLUS * stdp_burst_pair_e_i_plus * (m.W_E_I_R_MAX * ei_connectivity - w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC]))
+                w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] += (250 * m.ETA * m.BETA_2 * m.A_PAIR_MINUS * stdp_burst_pair_e_i_minus * w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC])
+                w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] += (250 * m.ETA * m.BETA_2 * m.A_TRIP_PLUS * stdp_burst_pair_e_i_plus * (m.W_E_I_R_MAX * ei_connectivity - w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC]))
 
             stdp_weight_change = m.A_TRIP_PLUS * stdp_burst_pair_e_e_plus * (m.W_E_E_R_MAX * ee_connectivity - w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)])
             stdp_weight_change += m.A_PAIR_MINUS * stdp_burst_pair_e_e_minus * w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)]
@@ -762,7 +763,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
             # w_r_copy['I'][w_r_copy['I'] < 0] = 0
             # w_r_copy['I'][w_r_copy['I'] > m.W_I_E_R_MAX] = m.W_I_E_R_MAX
 
-        if i_e % 10 == 0:
+        if i_e % 1 == 0:
 
             mean_initial_first_spk_time = np.nanmean(first_spk_times[400:410])
             mean_final_first_spk_time = np.nanmean(first_spk_times[800:810])
@@ -790,33 +791,27 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 'freqs': freqs,
                 'exc_raster': exc_raster,
                 'inh_raster': inh_raster,
-                'prop_speed': prop_speed,
-                'temporal_widths': temporal_widths,
-                'avg_temporal_width': avg_temporal_width,
-                'stable': len(~np.isnan(first_spk_times[950:1000])) > 30,
-                # 'gs': rsp.gs,
+                'w_r_e': rsp.ntwk.w_r['E'],
+                'w_r_i': rsp.ntwk.w_r['I'],
             }
 
-
-            # if e_cell_fr_setpoints is not None:
-            #     base_data_to_save['e_cell_fr_setpoints'] = e_cell_fr_setpoints
-
-            if e_cell_pop_fr_setpoint is not None:
-                base_data_to_save['e_cell_pop_fr_setpoint'] = e_cell_pop_fr_setpoint
 
             if i_e >= m.DROPOUT_ITER:
                 base_data_to_save['surviving_cell_mask'] = surviving_cell_mask
 
+            batched_data_to_save.append(base_data_to_save)
 
+            # if i_e % 10 == 0:
+            #     update_obj = {
+            #         'w_r_e': rsp.ntwk.w_r['E'],
+            #         'w_r_i': rsp.ntwk.w_r['I'],
+            #     }
+            #     base_data_to_save.update(update_obj)
 
-            if i_e % 10 == 0:
-                update_obj = {
-                    'w_r_e': rsp.ntwk.w_r['E'],
-                    'w_r_i': rsp.ntwk.w_r['I'],
-                }
-                base_data_to_save.update(update_obj)
+            if i_e % 100 == 0:
+                sio.savemat(robustness_output_dir + '/' + f'title_{title}_idx_{zero_pad(i_e, 4)}', {'data': batched_data_to_save})
+                batched_data_to_save = []
 
-            sio.savemat(robustness_output_dir + '/' + f'title_{title}_idx_{zero_pad(i_e, 4)}', base_data_to_save)
         # fig.savefig(f'{output_dir}/{zero_pad(i_e, 4)}.png')
 
         end = time.time()
