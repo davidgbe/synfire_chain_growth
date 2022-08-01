@@ -807,8 +807,8 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
             #         'w_r_i': rsp.ntwk.w_r['I'],
             #     }
             #     base_data_to_save.update(update_obj)
-
-            if i_e % 100 == 0:
+            save_freq = 100
+            if i_e % save_freq == (save_freq - 1):
                 sio.savemat(robustness_output_dir + '/' + f'title_{title}_idx_{zero_pad(i_e, 4)}', {'data': batched_data_to_save})
                 batched_data_to_save = []
 
