@@ -14,7 +14,7 @@
 #SBATCH --chdir=.
 
 ## Module import
-module load foster/python/miniconda/3.8 
+module load contrib/python_3.8/3.8
 CURRDIR=$(pwd)
 echo $CURRDIR
 ## Commands to run

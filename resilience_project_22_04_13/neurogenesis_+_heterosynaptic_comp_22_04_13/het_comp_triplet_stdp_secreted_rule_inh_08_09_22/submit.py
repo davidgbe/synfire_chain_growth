@@ -5,7 +5,7 @@ import functools
 
 base_path = os.curdir
 scripts = [
-	'submit_klone.slurm',
+	'submit.slurm',
 ]
 
 def replace_all(line, repl_dict):
