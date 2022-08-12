@@ -139,7 +139,7 @@ M = Generic(
     HETERO_COMP_MECH=args.hetero_comp_mech[0],
     STDP_TYPE=args.stdp_type[0],
 
-    SETPOINT_MEASUREMENT_PERIOD=(100, 150),
+    SETPOINT_MEASUREMENT_PERIOD=(500, 550),
 )
 
 print(M.HETERO_COMP_MECH)
@@ -239,7 +239,7 @@ def gen_continuous_network(size, m):
 
     inactive_weights = np.concatenate([exp_if_under_val(0.075, (1, size), 0.5 * r * w) for r in np.random.rand(size)], axis=0)
 
-    sequence_weights = np.where(active_inactive_pairings, (0.7 + 0.3 * args.silent_fraction[0]) * w * exp_if_pos(cont_idx_dists, 0.15), inactive_weights)
+    sequence_weights = np.where(active_inactive_pairings, (0.5 + 0.8 * args.silent_fraction[0]) * w * exp_if_pos(cont_idx_dists, 0.15), inactive_weights)
     sequence_delays = np.abs(cont_idx_dists)
     np.fill_diagonal(sequence_delays, 0)
 
@@ -812,7 +812,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 sio.savemat(robustness_output_dir + '/' + f'title_{title}_idx_{zero_pad(i_e, 4)}', {'data': batched_data_to_save})
                 batched_data_to_save = []
 
-        # fig.savefig(f'{output_dir}/{zero_pad(i_e, 4)}.png')
+        fig.savefig(f'{output_dir}/{zero_pad(i_e, 4)}.png')
 
         end = time.time()
         secs_per_cycle = f'{end - start}'
