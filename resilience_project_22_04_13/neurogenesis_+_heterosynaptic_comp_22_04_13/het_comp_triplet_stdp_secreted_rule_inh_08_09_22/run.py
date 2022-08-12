@@ -88,7 +88,7 @@ M = Generic(
     N_DRIVING_CELLS=10,
     PROJECTION_NUM=10,
     INPUT_STD=1e-3,
-    BURST_T=1.5e-3,
+    BURST_T=1e-3,
     INPUT_DELAY=10e-3,
     
     # OTHER INPUTS
@@ -97,7 +97,7 @@ M = Generic(
 
     # Connection probabilities
     CON_PROB_R=0.,
-    E_I_CON_PROB=0.075,
+    E_I_CON_PROB=0.1,
     I_E_CON_PROB=1.,
 
     # Weights
@@ -107,7 +107,7 @@ M = Generic(
     W_E_E_R=args.w_ee[0],
     W_E_E_R_MIN=1e-8,
     W_E_E_R_MAX=10e-4,
-    W_E_I_R_MAX=5 * args.w_ei[0],
+    W_E_I_R_MAX=2 * args.w_ei[0],
     SUPER_SYNAPSE_SIZE=1.5e-3,
 
     # Dropout params
@@ -127,7 +127,7 @@ M = Generic(
     A_TRIP_PLUS=6.5,
     A_PAIR_MINUS=-7.1,
 
-    ETA=0.025,
+    ETA=0.01,
     ALPHA_1=1,
     ALPHA_2=0,
     ALPHA_3=0,
@@ -139,7 +139,7 @@ M = Generic(
     HETERO_COMP_MECH=args.hetero_comp_mech[0],
     STDP_TYPE=args.stdp_type[0],
 
-    SETPOINT_MEASUREMENT_PERIOD=(850, 880),
+    SETPOINT_MEASUREMENT_PERIOD=(100, 150),
 )
 
 print(M.HETERO_COMP_MECH)
@@ -636,7 +636,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                     for k_t in trip_spk_hist[curr_spk_e]:
                         stdp_burst_pair_e_e_plus[curr_spk_e, :] += stdp_burst_pair_e_e_outer_plus[:, -(i_t - k_t):].sum(axis=1) * m.KERNEL_TRIP_EE[i_t - k_t]
 
-                    trip_spk_hist[curr_spk_e].append(i_t)
+                    trip_spk_hist[curr_spk_e] = [i_t]
 
                 # print(curr_spks_i)
                 for curr_spk_i in curr_spks_i.nonzero()[0]:
@@ -649,7 +649,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                     for k_t in trip_spk_hist[curr_spk_i + m.N_EXC]:
                         stdp_burst_pair_e_i_plus[curr_spk_i, :] += stdp_burst_pair_e_i_outer_plus[:, -(i_t - k_t):].sum(axis=1) * m.KERNEL_TRIP_EE[i_t - k_t]
 
-                    trip_spk_hist[curr_spk_i + m.N_EXC].append(i_t)
+                    trip_spk_hist[curr_spk_i + m.N_EXC] = [i_t]
 
             if m.STDP_TYPE == 'mult':
                 w_r_copy['E'][:m.N_EXC, :m.N_EXC] += (m.ETA * m.BETA_1 * m.A_PAIR_MINUS * stdp_burst_pair_e_e_minus * w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)])
@@ -658,8 +658,8 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 w_r_copy['E'][:m.N_EXC, :m.N_EXC] += (m.ETA * m.BETA_2 * m.A_PAIR_MINUS * stdp_burst_pair_e_e_minus * w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)])
                 w_r_copy['E'][:m.N_EXC, :m.N_EXC] += (m.ETA * m.BETA_2 * m.A_TRIP_PLUS * stdp_burst_pair_e_e_plus * (m.W_E_E_R_MAX * ee_connectivity - w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)]))
 
-                w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] += (250 * m.ETA * m.BETA_2 * m.A_PAIR_MINUS * stdp_burst_pair_e_i_minus * w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC])
-                w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] += (250 * m.ETA * m.BETA_2 * m.A_TRIP_PLUS * stdp_burst_pair_e_i_plus * (m.W_E_I_R_MAX * ei_connectivity - w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC]))
+                w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] += (0 * m.ETA * m.BETA_2 * m.A_PAIR_MINUS * stdp_burst_pair_e_i_minus * w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC])
+                w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] += (2500 * m.ETA * m.BETA_2 * m.A_TRIP_PLUS * stdp_burst_pair_e_i_plus * (m.W_E_I_R_MAX * ei_connectivity - w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC]))
 
             stdp_weight_change = m.A_TRIP_PLUS * stdp_burst_pair_e_e_plus * (m.W_E_E_R_MAX * ee_connectivity - w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)])
             stdp_weight_change += m.A_PAIR_MINUS * stdp_burst_pair_e_e_minus * w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)]
@@ -753,7 +753,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
             w_r_copy['E'][:m.N_EXC, :(m.N_EXC + m.N_UVA)][np.logical_and((w_r_copy['E'][:m.N_EXC, :(m.N_EXC + m.N_UVA)] < m.W_E_E_R_MIN), ee_connectivity)] = m.W_E_E_R_MIN
             w_r_copy['E'][:m.N_EXC, :(m.N_EXC)][w_r_copy['E'][:m.N_EXC, (m.N_EXC)] > m.W_E_E_R_MAX] = m.W_E_E_R_MAX
 
-            # output weight bound
+            # input weight bound to i cells
             i_cell_summed_inputs = w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC].sum(axis=1)
             rescaling = np.where(i_cell_summed_inputs  > ei_initial_summed_inputs, ei_initial_summed_inputs / i_cell_summed_inputs, 1.)
             w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] *= rescaling.reshape(rescaling.shape[0], 1)
@@ -812,7 +812,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 sio.savemat(robustness_output_dir + '/' + f'title_{title}_idx_{zero_pad(i_e, 4)}', {'data': batched_data_to_save})
                 batched_data_to_save = []
 
-        # fig.savefig(f'{output_dir}/{zero_pad(i_e, 4)}.png')
+        fig.savefig(f'{output_dir}/{zero_pad(i_e, 4)}.png')
 
         end = time.time()
         secs_per_cycle = f'{end - start}'
