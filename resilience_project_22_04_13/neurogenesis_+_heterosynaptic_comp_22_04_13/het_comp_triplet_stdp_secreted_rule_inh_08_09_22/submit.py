@@ -84,6 +84,7 @@ params['COMP_MECH'] = ['firing_rate_downward']
 params['CONDITION'] = ['no_repl_no_syn']
 params['PER_SILENT'] = [str(0)]
 params['A5'] = [str(1)]
+params['EI_STDP'] = [str(0)]
 
 
 n_seeds = len(params['SEED'])

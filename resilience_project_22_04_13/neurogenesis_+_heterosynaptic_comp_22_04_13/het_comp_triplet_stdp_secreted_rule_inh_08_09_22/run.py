@@ -659,7 +659,7 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 w_r_copy['E'][:m.N_EXC, :m.N_EXC] += (m.ETA * m.BETA_2 * m.A_TRIP_PLUS * stdp_burst_pair_e_e_plus * (m.W_E_E_R_MAX * ee_connectivity - w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)]))
 
                 w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] += (0 * m.ETA * m.BETA_2 * m.A_PAIR_MINUS * stdp_burst_pair_e_i_minus * w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC])
-                w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] += (2500 * m.ETA * m.BETA_2 * m.A_TRIP_PLUS * stdp_burst_pair_e_i_plus * (m.W_E_I_R_MAX * ei_connectivity - w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC]))
+                w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] += (0 * m.ETA * m.BETA_2 * m.A_TRIP_PLUS * stdp_burst_pair_e_i_plus * (m.W_E_I_R_MAX * ei_connectivity - w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC]))
 
             stdp_weight_change = m.A_TRIP_PLUS * stdp_burst_pair_e_e_plus * (m.W_E_E_R_MAX * ee_connectivity - w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)])
             stdp_weight_change += m.A_PAIR_MINUS * stdp_burst_pair_e_e_minus * w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)]
