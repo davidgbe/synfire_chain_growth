@@ -79,12 +79,13 @@ params['SEED'] = [str(i) for i in range(2000, 2025)]
 params['W_E_E'] = [str(1.4e-3)]
 params['W_E_I'] = [str(10e-5)]
 params['W_I_E'] = [str(2e-5)]
-params['DROP_SEV'] = [str(0.1), str(0.25), str(0.5)]
+params['DROP_SEV'] = [str(0.25), str(0.5)]
 params['COMP_MECH'] = ['firing_rate_downward']
 params['CONDITION'] = ['no_repl_no_syn']
 params['PER_SILENT'] = [str(0)]
 params['A5'] = [str(1)]
-params['EI_STDP'] = [str(0)]
+params['ESTDP_RATE'] = [str(1e-4), str(1e-3)]
+params['ISTDP_RATE'] = [str(0), str(25)]
 
 
 n_seeds = len(params['SEED'])

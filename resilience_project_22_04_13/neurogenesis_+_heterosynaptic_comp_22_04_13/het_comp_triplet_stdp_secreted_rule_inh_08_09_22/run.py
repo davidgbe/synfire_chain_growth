@@ -41,6 +41,8 @@ parser.add_argument('--w_ei', metavar='ei', type=float, nargs=1)
 parser.add_argument('--w_ie', metavar='ie', type=float, nargs=1)
 
 parser.add_argument('--alpha_5', metavar='a5', type=float, nargs=1)
+parser.add_argument('--beta_2', metavar='b2', type=float, nargs=1)
+parser.add_argument('--beta_3', metavar='b3', type=float, nargs=1)
 
 parser.add_argument('--silent_fraction', metavar='sf', type=float, nargs=1)
 
@@ -134,7 +136,8 @@ M = Generic(
     ALPHA_4=0.6,
     ALPHA_5=args.alpha_5[0],
     BETA_1=1,
-    BETA_2=1e-5, #1e-5
+    BETA_2=args.beta_2[0], #1e-5
+    BETA_3=args.beta_3[0],
 
     HETERO_COMP_MECH=args.hetero_comp_mech[0],
     STDP_TYPE=args.stdp_type[0],
@@ -658,8 +661,8 @@ def run_test(m, output_dir_name, n_show_only=None, add_noise=True, dropout={'E':
                 w_r_copy['E'][:m.N_EXC, :m.N_EXC] += (m.ETA * m.BETA_2 * m.A_PAIR_MINUS * stdp_burst_pair_e_e_minus * w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)])
                 w_r_copy['E'][:m.N_EXC, :m.N_EXC] += (m.ETA * m.BETA_2 * m.A_TRIP_PLUS * stdp_burst_pair_e_e_plus * (m.W_E_E_R_MAX * ee_connectivity - w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)]))
 
-                w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] += (0 * m.ETA * m.BETA_2 * m.A_PAIR_MINUS * stdp_burst_pair_e_i_minus * w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC])
-                w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] += (0 * m.ETA * m.BETA_2 * m.A_TRIP_PLUS * stdp_burst_pair_e_i_plus * (m.W_E_I_R_MAX * ei_connectivity - w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC]))
+                w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] += (m.ETA * m.BETA_3 * m.A_PAIR_MINUS * stdp_burst_pair_e_i_minus * w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC])
+                w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC] += (m.ETA * m.BETA_3 * m.A_TRIP_PLUS * stdp_burst_pair_e_i_plus * (m.W_E_I_R_MAX * ei_connectivity - w_r_copy['E'][m.N_EXC:(m.N_EXC + m.N_INH), :m.N_EXC]))
 
             stdp_weight_change = m.A_TRIP_PLUS * stdp_burst_pair_e_e_plus * (m.W_E_E_R_MAX * ee_connectivity - w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)])
             stdp_weight_change += m.A_PAIR_MINUS * stdp_burst_pair_e_e_minus * w_r_copy['E'][:(m.N_EXC), :(m.N_EXC + m.N_UVA)]
