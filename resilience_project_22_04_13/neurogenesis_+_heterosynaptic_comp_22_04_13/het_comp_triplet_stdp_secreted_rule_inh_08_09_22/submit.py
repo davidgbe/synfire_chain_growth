@@ -85,7 +85,7 @@ params['CONDITION'] = ['no_repl_no_syn']
 params['PER_SILENT'] = [str(0)]
 params['A5'] = [str(1)]
 params['ESTDP_RATE'] = [str(1e-4), str(1e-3)]
-params['ISTDP_RATE'] = [str(0), str(25)]
+params['ISTDP_RATE'] = [str(0.025), str(0.25)]
 
 
 n_seeds = len(params['SEED'])
